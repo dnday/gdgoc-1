@@ -1,0 +1,63 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?  // <--- DITAMBAHKAN: Untuk menyimpan Nama User
+  password  String?  // (Nullable) Kosong jika login via Google
+  picture   String?  // <--- DITAMBAHKAN: Untuk menyimpan Foto Profil Google
+  
+  jobs      Job[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt // <--- DITAMBAHKAN: Otomatis update jam saat diedit
+}
+
+model Job {
+  id           String        @id @default(uuid())
+  title        String
+  description  String
+  requirements String        @db.Text
+  
+  recruiterId  String
+  recruiter    User          @relation(fields: [recruiterId], references: [id])
+  
+  applications Application[]
+  
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+}
+
+model Application {
+  id               String   @id @default(uuid())
+  
+  jobId            String
+  job              Job      @relation(fields: [jobId], references: [id])
+  
+  candidateName    String
+  email            String
+  resumeUrl        String
+  resumeText       String?  @db.Text
+  
+  // AI Fields
+  skillsExtracted  String[]
+  summary          String?  @db.Text
+  matchScore       Int?
+  matchExplanation String?  @db.Text
+  
+  status           String   @default("applied")
+  createdAt        DateTime @default(now())
+}
