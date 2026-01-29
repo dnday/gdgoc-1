@@ -39,10 +39,28 @@ export class AuthController {
   @Get('google/callback')
   @UseGuards(AuthGuard('google'))
   async googleAuthRedirect(@Req() req, @Res() res) {
-    const data = await this.authService.login(req.user);
-    // Redirect ke Frontend dengan token dan role
+    const result = req.user;
+    
+    // Jika user baru dan belum ada role, redirect ke halaman pilih role
+    if (result.isNewUser && !result.user) {
+      const tempData = encodeURIComponent(JSON.stringify(result.tempUserData));
+      return res.redirect(
+        `http://localhost:3001/select-role?data=${tempData}`,
+      );
+    }
+    
+    // Jika user sudah ada atau baru dengan role, login
+    const data = await this.authService.login(result.user);
     res.redirect(
-      `http://localhost:3001/login-success?token=${data.accessToken}&role=${req.user.role}`,
+      `http://localhost:3001/login-success?token=${data.accessToken}&role=${result.user.role}`,
     );
+  }
+
+  // --- ENDPOINT COMPLETE GOOGLE REGISTRATION ---
+  @Post('google/complete')
+  async completeGoogleRegistration(@Body() body: any) {
+    // Create user with role after role selection
+    const newUser = await this.authService.createGoogleUser(body);
+    return this.authService.login(newUser);
   }
 }

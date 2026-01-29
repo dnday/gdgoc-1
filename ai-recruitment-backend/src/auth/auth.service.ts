@@ -77,15 +77,43 @@ export class AuthService {
     const user = await this.prisma.user.findFirst({
       where: { email: details.email },
     });
-    if (user) return user;
+    
+    // Jika user sudah ada, return user (existing user - login)
+    if (user) return { user, isNewUser: false };
 
-    // Jika user baru via Google, buat tanpa password
-    return await this.prisma.user.create({
-      data: {
+    // Jika user baru dan role sudah ada (dari state parameter), create user
+    if (details.role) {
+      const newUser = await this.prisma.user.create({
+        data: {
+          email: details.email,
+          name: details.name,
+          picture: details.picture,
+          role: details.role,
+        },
+      });
+      return { user: newUser, isNewUser: false };
+    }
+
+    // Jika user baru tapi belum ada role, return data untuk role selection
+    return { 
+      user: null, 
+      isNewUser: true,
+      tempUserData: {
         email: details.email,
         name: details.name,
         picture: details.picture,
-        role: details.role || 'recruiter', // Default ke recruiter jika tidak ada
+      }
+    };
+  }
+
+  // --- 5. CREATE GOOGLE USER AFTER ROLE SELECTION ---
+  async createGoogleUser(data: any) {
+    return await this.prisma.user.create({
+      data: {
+        email: data.email,
+        name: data.name,
+        picture: data.picture,
+        role: data.role,
       },
     });
   }

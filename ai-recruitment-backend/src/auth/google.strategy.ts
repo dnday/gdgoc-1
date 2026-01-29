@@ -25,14 +25,14 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     const { emails, displayName, photos } = profile;
     
     // Extract role from state parameter
-    let role = 'recruiter'; // default
+    let role = null; // No default - force role selection for new users
     try {
       if (request.query.state) {
         const state = JSON.parse(decodeURIComponent(request.query.state));
-        role = state.role || 'recruiter';
+        role = state.role || null;
       }
     } catch (e) {
-      // If state parsing fails, use default
+      // If state parsing fails, role stays null
     }
     
     // Extract user details from Google profile
