@@ -1,11 +1,10 @@
 import {
-  Injectable,
   BadRequestException,
-  UnauthorizedException,
+  Injectable
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { PrismaService } from '../prisma.service';
 import * as bcrypt from 'bcrypt';
+import { PrismaService } from '../prisma.service';
 
 @Injectable()
 export class AuthService {
@@ -17,7 +16,16 @@ export class AuthService {
   // --- 1. UTILITY: Generate Token ---
   async generateToken(user: any) {
     const payload = { email: user.email, sub: user.id };
-    return { accessToken: this.jwtService.sign(payload) };
+    return {
+      accessToken: this.jwtService.sign(payload),
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        picture: user.picture,
+      },
+    };
   }
 
   // --- 2. FITUR REGISTER MANUAL ---
@@ -34,12 +42,13 @@ export class AuthService {
     // Hash Password (Encrypt)
     const hashedPassword = await bcrypt.hash(body.password, 10);
 
-    // Simpan User Baru
+    // Simpan User Baru dengan role
     const newUser = await this.prisma.user.create({
       data: {
         email: body.email,
         name: body.name,
         password: hashedPassword,
+        role: body.role || 'recruiter', // Default ke recruiter jika tidak ada
       },
     });
 
@@ -76,6 +85,7 @@ export class AuthService {
         email: details.email,
         name: details.name,
         picture: details.picture,
+        role: details.role || 'recruiter', // Default ke recruiter jika tidak ada
       },
     });
   }

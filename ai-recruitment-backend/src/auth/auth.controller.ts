@@ -1,12 +1,12 @@
 import {
-  Controller,
-  Get,
-  UseGuards,
-  Req,
-  Res,
-  Post,
-  Body,
-  UnauthorizedException,
+    Body,
+    Controller,
+    Get,
+    Post,
+    Req,
+    Res,
+    UnauthorizedException,
+    UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
@@ -40,9 +40,9 @@ export class AuthController {
   @UseGuards(AuthGuard('google'))
   async googleAuthRedirect(@Req() req, @Res() res) {
     const data = await this.authService.login(req.user);
-    // Redirect ke Frontend
+    // Redirect ke Frontend dengan token dan role
     res.redirect(
-      `http://localhost:3001/login-success?token=${data.accessToken}`,
+      `http://localhost:3001/login-success?token=${data.accessToken}&role=${req.user.role}`,
     );
   }
 }

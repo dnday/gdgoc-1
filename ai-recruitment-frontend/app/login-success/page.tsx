@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
 import Cookies from "js-cookie";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect } from "react";
 
 function LoginSuccessContent() {
   const router = useRouter();
@@ -10,12 +10,40 @@ function LoginSuccessContent() {
 
   useEffect(() => {
     const token = searchParams.get("token");
+    const roleFromUrl = searchParams.get("role");
+    const redirect = searchParams.get("redirect");
 
     if (token) {
       // Simpan token ke Cookie (berlaku 1 hari)
-      Cookies.set("token", token, { expires: 1 });
-      // Langsung redirect ke Dashboard
-      router.push("/dashboard");
+      Cookies.set("token", token, {
+        expires: 1,
+        path: "/",
+        sameSite: "lax",
+      });
+
+      // Get role from URL or localStorage (for Google OAuth from register page)
+      let finalRole = roleFromUrl;
+      if (!finalRole && typeof window !== "undefined") {
+        const pendingRole = localStorage.getItem("pendingRole");
+        if (pendingRole) {
+          finalRole = pendingRole;
+          localStorage.removeItem("pendingRole"); // Clean up
+        }
+      }
+
+      // Save to localStorage
+      if (typeof window !== "undefined" && finalRole) {
+        localStorage.setItem("userRole", finalRole);
+      }
+
+      // Redirect berdasarkan role
+      const redirectPath =
+        redirect || (finalRole === "candidate" ? "/dashboard/candidate" : "/dashboard");
+
+      console.log("Google OAuth success - Role:", finalRole);
+      console.log("Redirecting to:", redirectPath);
+
+      router.push(redirectPath);
     } else {
       // Kalau gak ada token, balikin ke home
       router.push("/");

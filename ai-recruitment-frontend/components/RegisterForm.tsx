@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import Cookies from "js-cookie";
+import { ArrowRight, Briefcase, Lock, Mail, User } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Lock, Mail, ArrowRight, User, Briefcase } from "lucide-react";
+import { useState } from "react";
 
 export default function RegisterForm() {
   const router = useRouter();
@@ -33,7 +33,21 @@ export default function RegisterForm() {
       }
 
       Cookies.set("token", data.accessToken, { expires: 1 });
-      router.push("/dashboard");
+
+      // Also save to localStorage as fallback
+      if (typeof window !== "undefined") {
+        localStorage.setItem("token", data.accessToken);
+        localStorage.setItem("userRole", role);
+      }
+
+      console.log("✅ Register success! Role:", role);
+
+      // Redirect berdasarkan role yang dipilih
+      const redirectPath =
+        role === "candidate" ? "/dashboard/candidate" : "/dashboard";
+      
+      // Use window.location for more reliable redirect
+      window.location.href = redirectPath;
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -166,9 +180,11 @@ export default function RegisterForm() {
         {/* Google Sign-Up Button */}
         <button
           type="button"
-          onClick={() =>
-            (window.location.href = "http://localhost:3000/auth/google")
-          }
+          onClick={() => {
+            // Pass role via OAuth state parameter
+            const state = encodeURIComponent(JSON.stringify({ role }));
+            window.location.href = `http://localhost:3000/auth/google?state=${state}`;
+          }}
           className="w-full py-3 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-xl border border-gray-200 transition-all flex items-center justify-center gap-3">
           <svg
             className="w-5 h-5"

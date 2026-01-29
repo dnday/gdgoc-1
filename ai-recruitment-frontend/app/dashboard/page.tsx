@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Cookies from "js-cookie";
+import { Briefcase, Plus, Search, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Plus, Search, Briefcase, Users } from "lucide-react";
+import { useEffect, useState } from "react";
 
 // Job type definition
 interface Job {
@@ -57,11 +57,22 @@ export default function Dashboard() {
   const [jobs, setJobs] = useState<Job[]>(mockJobs);
 
   useEffect(() => {
-    const token = Cookies.get("token");
+    // Check both cookie and localStorage
+    const tokenFromCookie = Cookies.get("token");
+    const tokenFromStorage = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const token = tokenFromCookie || tokenFromStorage;
+
+    console.log("Dashboard - Checking auth...");
+    console.log("Cookie token:", tokenFromCookie ? "EXISTS" : "MISSING");
+    console.log("LocalStorage token:", tokenFromStorage ? "EXISTS" : "MISSING");
+
     if (!token) {
+      console.log("❌ No token found, redirecting to login");
       router.push("/");
       return;
     }
+
+    console.log("✅ Token found, loading dashboard");
     setLoading(false);
   }, [router]);
 
