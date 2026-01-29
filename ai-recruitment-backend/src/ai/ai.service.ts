@@ -1,5 +1,5 @@
-import { Injectable } from '@nestjs/common';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class AiService {
@@ -73,6 +73,33 @@ export class AiService {
         skills: [],
         summary: 'Error System',
       };
+    }
+  }
+  async generateEmailDraft(
+    candidateName: string,
+    jobTitle: string,
+    status: 'accepted' | 'rejected',
+    reasonOrDate?: string, // <--- Parameter ini jadi fleksibel (bisa alasan tolak ATAU tanggal interview)
+  ) {
+    let prompt = '';
+
+    if (status === 'accepted') {
+      // KITA UBAH PROMPT DI SINI 👇
+      prompt = `
+      Act as an HR named "Maya". Write an INTERVIEW INVITATION email to "${candidateName}" for "${jobTitle}".
+      Language: Indonesian (Formal & Enthusiastic).
+      Specific Instruction: The interview is scheduled for "${reasonOrDate || 'a time to be discussed'}".
+      Structure: Subject, Greeting, Congratulate them, State the interview time clearly ("${reasonOrDate}"), Closing.
+      Output only the email body text.
+    `;
+    } else {
+      prompt = `
+      Act as an HR named "Maya". Write a polite REJECTION email to "${candidateName}" for "${jobTitle}".
+      Language: Indonesian (Formal & Empathetic).
+      Reason: "${reasonOrDate || 'Qualifications do not match'}".
+      Structure: Subject, Greeting, Thank them, Rejection gently, Encourage future apply, Closing.
+      Output only the email body text.
+    `;
     }
   }
 }
