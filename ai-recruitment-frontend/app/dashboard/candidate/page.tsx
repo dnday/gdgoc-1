@@ -126,14 +126,14 @@ export default function CandidateDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <main className="max-w-4xl mx-auto p-8">
+      <main className="max-w-4xl mx-auto px-4 py-6 sm:p-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">
+            <h1 className="text-xl sm:text-3xl font-bold text-gray-900">
               Find Your Next Opportunity
             </h1>
-            <p className="text-gray-500 mt-2">
+            <p className="text-sm sm:text-base text-gray-500 mt-1 sm:mt-2">
               Browse available positions and apply to jobs that match your
               skills
             </p>
@@ -142,7 +142,7 @@ export default function CandidateDashboard() {
         </div>
 
         {/* Search */}
-        <div className="mb-6 p-4 bg-white rounded-2xl border border-gray-100">
+        <div className="mb-6 p-3 sm:p-4 bg-white rounded-2xl border border-gray-100">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
@@ -150,13 +150,13 @@ export default function CandidateDashboard() {
               placeholder="Search jobs by title, company, or skills..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-transparent text-gray-900 placeholder-gray-400 focus:outline-none"
+              className="w-full pl-10 pr-4 py-2.5 bg-transparent text-gray-900 placeholder-gray-400 focus:outline-none text-sm sm:text-base"
             />
           </div>
         </div>
 
         {/* Job List */}
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           {filteredJobs.length === 0 ? (
             <div className="text-center py-12 bg-white rounded-2xl border border-gray-100">
               <Briefcase className="w-12 h-12 text-gray-300 mx-auto mb-3" />
@@ -172,51 +172,56 @@ export default function CandidateDashboard() {
                 onClick={() =>
                   router.push(`/dashboard/candidate/jobs/${job.id}`)
                 }
-                className="bg-white rounded-2xl border border-gray-100 p-6 hover:shadow-lg hover:shadow-gray-100/50 transition-all cursor-pointer">
-                <div className="flex items-start gap-4">
-                  {/* Icon */}
-                  <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-6 hover:shadow-lg hover:shadow-gray-100/50 transition-all cursor-pointer">
+                <div className="flex items-start gap-3 sm:gap-4">
+                  {/* Icon - hidden on mobile */}
+                  <div className="hidden sm:flex w-12 h-12 bg-blue-50 rounded-xl items-center justify-center flex-shrink-0">
                     <Briefcase className="w-6 h-6 text-blue-600" />
                   </div>
 
                   {/* Content */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4">
+                      <div className="flex-1">
+                        <h3 className="text-base sm:text-lg font-semibold text-gray-900">
                           {job.title}
                         </h3>
-                        <p className="text-sm text-gray-600 mt-0.5">
+                        <p className="text-xs sm:text-sm text-gray-600 mt-0.5">
                           {job.company}
                         </p>
                       </div>
-                      <span className="px-3 py-1.5 bg-blue-50 text-blue-600 text-sm font-medium rounded-full flex-shrink-0">
+                      <span className="self-start px-2 sm:px-3 py-1 sm:py-1.5 bg-blue-50 text-blue-600 text-xs sm:text-sm font-medium rounded-full flex-shrink-0">
                         {job.type}
                       </span>
                     </div>
 
-                    {/* Description preview */}
-                    <p className="text-sm text-gray-500 mt-2 line-clamp-2">
+                    {/* Description preview - hidden on mobile */}
+                    <p className="hidden sm:block text-sm text-gray-500 mt-2 line-clamp-2">
                       {job.description}
                     </p>
 
                     {/* Time */}
-                    <div className="flex items-center gap-4 mt-3 text-sm text-gray-500">
+                    <div className="flex items-center gap-4 mt-2 sm:mt-3 text-xs sm:text-sm text-gray-500">
                       <div className="flex items-center gap-1.5">
-                        <Clock className="w-4 h-4" />
+                        <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         Posted {job.postedAgo}
                       </div>
                     </div>
 
                     {/* Skills */}
-                    <div className="flex items-center gap-2 mt-3 flex-wrap">
-                      {job.skills.map((skill, index) => (
+                    <div className="flex items-center gap-1.5 sm:gap-2 mt-2 sm:mt-3 flex-wrap">
+                      {job.skills.slice(0, 3).map((skill, index) => (
                         <span
                           key={index}
-                          className="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
+                          className="px-2 sm:px-3 py-0.5 sm:py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
                           {skill}
                         </span>
                       ))}
+                      {job.skills.length > 3 && (
+                        <span className="text-xs text-gray-400">
+                          +{job.skills.length - 3}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
