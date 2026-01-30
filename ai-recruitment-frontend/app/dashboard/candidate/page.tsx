@@ -1,7 +1,14 @@
 "use client";
 
 import Cookies from "js-cookie";
-import { Briefcase, Clock, MapPin, Search } from "lucide-react";
+import {
+  Briefcase,
+  Clock,
+  MapPin,
+  Search,
+  CheckCircle2,
+  Check,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import AccountDropdown from "@/components/AccountDropdown";
@@ -29,6 +36,7 @@ interface Job {
   postedAgo: string;
   skills: string[];
   type: string;
+  isApplied?: boolean;
 }
 
 // Helper function to calculate "posted ago"
@@ -65,10 +73,28 @@ export default function CandidateDashboard() {
   // Fetch jobs from API
   const fetchJobs = useCallback(async () => {
     try {
+      const userEmail = localStorage.getItem("userEmail");
+
+      // 1. Fetch available jobs
       const res = await fetch("http://localhost:3000/jobs");
       const data: ApiJob[] = await res.json();
 
-      // Transform API data to frontend format
+      // 2. Fetch user's applied jobs if email exists
+      let appliedJobIds: string[] = [];
+      if (userEmail) {
+        try {
+          const appliedRes = await fetch(
+            `http://localhost:3000/applications/candidate/applied?email=${userEmail}`,
+          );
+          if (appliedRes.ok) {
+            appliedJobIds = await appliedRes.json();
+          }
+        } catch (error) {
+          console.error("Failed to fetch applied jobs:", error);
+        }
+      }
+
+      // 3. Transform API data & Flag applied jobs
       const transformedJobs: Job[] = data.map((job) => ({
         id: job.id,
         title: job.title,
@@ -76,7 +102,8 @@ export default function CandidateDashboard() {
         description: job.description,
         postedAgo: getPostedAgo(job.createdAt),
         skills: parseSkills(job.requirements),
-        type: "Full-time", // Default type since not in API
+        type: "Full-time",
+        isApplied: appliedJobIds.includes(job.id),
       }));
 
       setJobs(transformedJobs);
@@ -129,7 +156,18 @@ export default function CandidateDashboard() {
       <main className="max-w-4xl mx-auto px-4 py-6 sm:p-8">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
-          <div>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="bg-gray-900 text-white p-2 rounded-lg shadow-sm">
+                <Check
+                  className="w-5 h-5"
+                  strokeWidth={3}
+                />
+              </div>
+              <span className="text-xl font-extrabold text-gray-900 tracking-tight">
+                RecruitPro
+              </span>
+            </div>
             <h1 className="text-xl sm:text-3xl font-bold text-gray-900">
               Find Your Next Opportunity
             </h1>
@@ -190,9 +228,16 @@ export default function CandidateDashboard() {
                           {job.company}
                         </p>
                       </div>
-                      <span className="self-start px-2 sm:px-3 py-1 sm:py-1.5 bg-blue-50 text-blue-600 text-xs sm:text-sm font-medium rounded-full flex-shrink-0">
-                        {job.type}
-                      </span>
+                      <div className="flex flex-row items-center gap-2">
+                        {job.isApplied && (
+                          <span className="flex items-center gap-1 px-2 py-1 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-md border border-emerald-200">
+                            <CheckCircle2 className="w-3 h-3" /> Applied
+                          </span>
+                        )}
+                        <span className="px-2 sm:px-3 py-1 sm:py-1.5 bg-blue-50 text-blue-600 text-xs sm:text-sm font-medium rounded-full">
+                          {job.type}
+                        </span>
+                      </div>
                     </div>
 
                     {/* Description preview - hidden on mobile */}

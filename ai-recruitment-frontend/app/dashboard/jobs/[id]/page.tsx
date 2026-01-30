@@ -20,6 +20,7 @@ import {
   Download,
   Edit3,
   Clock,
+  Loader2,
 } from "lucide-react";
 
 // --- Types ---
@@ -139,9 +140,33 @@ export default function JobDetailPage() {
     candidate: Application | null;
   }>({ isOpen: false, type: "", candidate: null });
   const [jobStatus, setJobStatus] = useState<"Open" | "Closed">("Open");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
-  // Fetch job data
+  // ... (existing code)
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sendingEmail, setSendingEmail] = useState(false);
+
+  const SuccessModal = () => (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center transform scale-100 animate-in zoom-in-95 duration-200 border border-white/20">
+        <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4 ring-8 ring-emerald-50/50">
+          <CheckCircle2 className="w-8 h-8 text-emerald-600" />
+        </div>
+        <h3 className="text-xl font-bold text-slate-900 mb-2">Email Sent!</h3>
+        <p className="text-slate-600 mb-6">
+          The candidate has been notified and the application status has been
+          updated.
+        </p>
+        <button
+          onClick={() => setShowSuccessModal(false)}
+          className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-medium rounded-xl transition-colors shadow-lg shadow-slate-900/20">
+          Awesome
+        </button>
+      </div>
+    </div>
+  );
+
   const fetchJob = useCallback(async () => {
     try {
       const res = await fetch(`http://localhost:3000/jobs/${jobId}`);
@@ -217,8 +242,31 @@ export default function JobDetailPage() {
     setEmailModal({ isOpen: false, type: "", candidate: null });
   };
 
+  const toggleJobStatus = async () => {
+    const newStatus = jobStatus === "Open" ? false : true;
+    // Optimistic Update
+    setJobStatus(newStatus ? "Open" : "Closed");
+
+    try {
+      const res = await fetch(`http://localhost:3000/jobs/${jobId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: newStatus }),
+      });
+
+      if (!res.ok) throw new Error("Failed to update status");
+
+      setJob((prev) => (prev ? { ...prev, isActive: newStatus } : null));
+    } catch (error) {
+      console.error(error);
+      alert("Failed to update job status");
+      setJobStatus(jobStatus); // Revert
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-slate-900 flex flex-col">
+      {showSuccessModal && <SuccessModal />}
       {/* Sticky Job Header */}
       <header className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
@@ -251,11 +299,13 @@ export default function JobDetailPage() {
 
             <div className="flex items-center gap-2 sm:gap-3 ml-auto sm:ml-0">
               <button
-                onClick={() =>
-                  setJobStatus(jobStatus === "Open" ? "Closed" : "Open")
-                }
-                className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-slate-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
-                {jobStatus === "Open" ? "Close" : "Reopen"}
+                onClick={toggleJobStatus}
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium border rounded-lg transition-colors ${
+                  jobStatus === "Open"
+                    ? "text-red-600 bg-white border-red-200 hover:bg-red-50"
+                    : "text-emerald-600 bg-white border-emerald-200 hover:bg-emerald-50"
+                }`}>
+                {jobStatus === "Open" ? "Close Job" : "Reopen Job"}
               </button>
               <button className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-white bg-slate-900 rounded-lg hover:bg-slate-800 shadow-sm">
                 <Edit3 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -504,9 +554,14 @@ export default function JobDetailPage() {
                       </h3>
                     </div>
                     {selectedCandidate.matchScore && (
-                      <span className="text-xl sm:text-2xl font-bold text-slate-900">
-                        {selectedCandidate.matchScore}%
-                      </span>
+                      <div className="flex flex-col items-end">
+                        <span className="text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                          Match Score
+                        </span>
+                        <span className="text-xl sm:text-2xl font-bold text-slate-900">
+                          {selectedCandidate.matchScore}%
+                        </span>
+                      </div>
                     )}
                   </div>
 
@@ -549,18 +604,37 @@ export default function JobDetailPage() {
 
             {/* Footer: Decision Actions */}
             <div className="p-4 sm:p-6 border-t border-gray-100 bg-white">
-              <div className="grid grid-cols-2 gap-2 sm:gap-3">
-                <button
-                  onClick={() => handleDecision("reject", selectedCandidate)}
-                  className="w-full py-2 sm:py-2.5 rounded-lg border border-red-100 text-red-600 font-medium text-xs sm:text-sm hover:bg-red-50 flex items-center justify-center gap-1.5 sm:gap-2">
-                  <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Reject
-                </button>
-                <button
-                  onClick={() => handleDecision("accept", selectedCandidate)}
-                  className="w-full py-2 sm:py-2.5 rounded-lg bg-slate-900 text-white font-medium text-xs sm:text-sm hover:bg-slate-800 flex items-center justify-center gap-1.5 sm:gap-2 shadow-sm">
-                  <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Accept
-                </button>
-              </div>
+              {["accepted", "rejected"].includes(
+                selectedCandidate.status.toLowerCase(),
+              ) ? (
+                <div
+                  className={`w-full py-3 rounded-lg flex items-center justify-center gap-2 font-medium bg-${
+                    selectedCandidate.status === "accepted" ? "emerald" : "red"
+                  }-50 text-${
+                    selectedCandidate.status === "accepted" ? "emerald" : "red"
+                  }-700`}>
+                  {selectedCandidate.status === "accepted" ? (
+                    <CheckCircle2 className="w-5 h-5" />
+                  ) : (
+                    <XCircle className="w-5 h-5" />
+                  )}
+                  Candidate {selectedCandidate.status}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                  <button
+                    onClick={() => handleDecision("reject", selectedCandidate)}
+                    className="w-full py-2 sm:py-2.5 rounded-lg border border-red-100 text-red-600 font-medium text-xs sm:text-sm hover:bg-red-50 flex items-center justify-center gap-1.5 sm:gap-2">
+                    <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Reject
+                  </button>
+                  <button
+                    onClick={() => handleDecision("accept", selectedCandidate)}
+                    className="w-full py-2 sm:py-2.5 rounded-lg bg-slate-900 text-white font-medium text-xs sm:text-sm hover:bg-slate-800 flex items-center justify-center gap-1.5 sm:gap-2 shadow-sm">
+                    <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />{" "}
+                    Accept
+                  </button>
+                </div>
+              )}
             </div>
           </aside>
         )}
@@ -592,11 +666,23 @@ export default function JobDetailPage() {
             </div>
 
             <div className="p-4 sm:p-6 overflow-y-auto flex-1">
-              <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-3 mb-4 flex items-start gap-3">
-                <Sparkles className="w-4 h-4 text-indigo-600 mt-0.5 shrink-0" />
-                <p className="text-xs text-indigo-800">
-                  AI has drafted this email based on the candidate's profile.
-                </p>
+              <div className="rounded-xl p-4 mb-5 flex items-start gap-4 border bg-violet-50/50 border-violet-100">
+                <div className="p-2 rounded-lg shrink-0 bg-violet-100 text-violet-600">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold mb-1 text-violet-900 flex items-center gap-2">
+                    AI Drafted Message
+                    <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 text-[10px] sm:text-[10px] text-white font-bold tracking-wide shadow-sm">
+                      GEMINI
+                    </span>
+                  </h4>
+                  <p className="text-xs leading-relaxed text-violet-700">
+                    This email has been generated based on the candidate's
+                    profile and the job requirements. Feel free to edit before
+                    sending.
+                  </p>
+                </div>
               </div>
 
               <div className="space-y-3 sm:space-y-4">
@@ -608,10 +694,10 @@ export default function JobDetailPage() {
                     type="text"
                     defaultValue={
                       emailModal.type === "accept"
-                        ? "Update on your application - Interview Invitation"
-                        : "Update on your application at Company"
+                        ? `Interview Invitation - ${job?.title}`
+                        : `Application Status - ${job?.title}`
                     }
-                    className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                    className="w-full text-sm border border-slate-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 outline-none transition-all placeholder:text-slate-400 font-medium text-slate-700"
                   />
                 </div>
                 <div>
@@ -619,12 +705,12 @@ export default function JobDetailPage() {
                     Message
                   </label>
                   <textarea
-                    rows={5}
-                    className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none outline-none"
+                    rows={8}
+                    className="w-full text-sm border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 resize-none outline-none transition-all placeholder:text-slate-400 font-medium text-slate-700 leading-relaxed"
                     defaultValue={
                       emailModal.type === "accept"
-                        ? `Hi ${emailModal.candidate?.candidateName},\n\nWe were impressed by your profile and would love to move forward...`
-                        : `Hi ${emailModal.candidate?.candidateName},\n\nThank you for your interest. Unfortunately, we have decided to proceed with other candidates...`
+                        ? `Dear ${emailModal.candidate?.candidateName},\n\nWe have reviewed your application for the ${job?.title} position and were impressed by your profile. We would like to invite you for an interview to discuss how you can contribute to our team.\n\nPlease let us know your availability for the coming week.\n\nBest regards,\nRecruitment Team`
+                        : `Dear ${emailModal.candidate?.candidateName},\n\nThank you for giving us the opportunity to consider your application for the ${job?.title} position.\n\nAfter careful review, we have decided to proceed with other candidates who more closely match our current requirements. We appreciate your interest and wish you the best in your job search.\n\nSincerely,\nRecruitment Team`
                     }
                   />
                 </div>
@@ -638,14 +724,97 @@ export default function JobDetailPage() {
                 Cancel
               </button>
               <button
-                onClick={closeEmailModal}
-                className={`flex-1 sm:flex-initial px-4 py-2 text-sm font-medium text-white rounded-lg shadow-sm ${
+                disabled={sendingEmail}
+                onClick={async () => {
+                  try {
+                    setSendingEmail(true);
+                    // Send Email & Update Status
+                    const res = await fetch(
+                      "http://localhost:3000/applications/send-email",
+                      {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          appId: emailModal.candidate?.id,
+                          to: emailModal.candidate?.email,
+                          subject:
+                            // @ts-ignore
+                            document.querySelector('input[type="text"]').value,
+                          message:
+                            // @ts-ignore
+                            document.querySelector("textarea").value,
+                          status:
+                            emailModal.type === "accept"
+                              ? "accepted"
+                              : "rejected",
+                        }),
+                      },
+                    );
+
+                    if (res.ok) {
+                      // Update Local State (Optimistic Update)
+                      setJob((prevJob) => {
+                        if (!prevJob) return null;
+                        return {
+                          ...prevJob,
+                          applications: prevJob.applications.map((app) =>
+                            app.id === emailModal.candidate?.id
+                              ? {
+                                  ...app,
+                                  status:
+                                    emailModal.type === "accept"
+                                      ? "accepted"
+                                      : "rejected",
+                                }
+                              : app,
+                          ),
+                        };
+                      });
+
+                      if (selectedCandidate?.id === emailModal.candidate?.id) {
+                        setSelectedCandidate((prev: any) => ({
+                          ...prev,
+                          status:
+                            emailModal.type === "accept"
+                              ? "accepted"
+                              : "rejected",
+                        }));
+                      }
+
+                      closeEmailModal();
+                      setShowSuccessModal(true);
+                    } else {
+                      alert("Failed to send email");
+                    }
+                  } catch (error) {
+                    console.error("Error sending email:", error);
+                    alert("Error sending email");
+                  } finally {
+                    setSendingEmail(false);
+                  }
+                }}
+                className={`flex-1 sm:flex-initial px-4 py-2 text-sm font-medium text-white rounded-lg shadow-sm flex items-center justify-center gap-2 ${
+                  sendingEmail
+                    ? "opacity-70 cursor-not-allowed"
+                    : "hover:bg-opacity-90"
+                } ${
                   emailModal.type === "accept"
-                    ? "bg-emerald-600 hover:bg-emerald-700"
+                    ? "bg-black hover:bg-slate-800"
                     : "bg-red-600 hover:bg-red-700"
                 }`}>
-                <span className="hidden sm:inline">Confirm & Send Email</span>
-                <span className="sm:hidden">Send</span>
+                {sendingEmail ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Sending...</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="hidden sm:inline">
+                      Confirm & Send Email
+                    </span>
+                    <span className="sm:hidden">Send</span>
+                  </>
+                )}
               </button>
             </div>
           </div>

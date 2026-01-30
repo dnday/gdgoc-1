@@ -5,12 +5,15 @@ import { PrismaService } from '../prisma.service';
 export class JobsService {
   constructor(private prisma: PrismaService) {}
 
-  // Ambil semua job + hitung jumlah pelamar
+  // Ambil semua job + hitung jumlah pelamar + recruiter info
   async findAll() {
     return this.prisma.job.findMany({
-      where: { isActive: true },
+      // where: { isActive: true }, // Hapus atau comment ini agar semua job (termasuk closed) muncul
       orderBy: { createdAt: 'desc' }, // Urutkan dari yang terbaru
       include: {
+        recruiter: {
+          select: { name: true, email: true },
+        },
         _count: {
           select: { applications: true }, // PENTING: Hitung jumlah aplikasi
         },
@@ -51,6 +54,21 @@ export class JobsService {
         requirements: data.requirements,
         recruiter: { connect: { id: recruiterId } },
       },
+    });
+  }
+
+  // Update Job
+  async update(id: string, data: any) {
+    return this.prisma.job.update({
+      where: { id },
+      data,
+    });
+  }
+
+  // Delete Job
+  async delete(id: string) {
+    return this.prisma.job.delete({
+      where: { id },
     });
   }
 }

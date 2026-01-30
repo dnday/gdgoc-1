@@ -6,6 +6,8 @@ import {
   UseGuards,
   Request,
   Param,
+  Patch,
+  Delete,
 } from '@nestjs/common';
 import { JobsService } from './jobs.service'; // Panggil Service, bukan Prisma langsung
 import { AuthGuard } from '@nestjs/passport';
@@ -34,5 +36,15 @@ export class JobsController {
     const userId = req.user.userId || req.user.sub || req.user.id;
 
     return this.jobsService.create(body, userId);
+  }
+
+  @Patch(':id')
+  async updateJob(@Param('id') id: string, @Body() body: any) {
+    return this.jobsService.update(id, body);
+  }
+
+  @Delete(':id')
+  async deleteJob(@Param('id') id: string) {
+    return this.jobsService.delete(id);
   }
 }

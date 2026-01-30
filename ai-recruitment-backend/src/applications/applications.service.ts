@@ -40,7 +40,7 @@ export class ApplicationsService {
     if (!file) throw new BadRequestException('File PDF Wajib!');
 
     // A. Upload ke Supabase
-    const fileName = `resumes/${Date.now()}_${file.originalname.replace(/\s/g, '')}`;
+    const fileName = `${Date.now()}_${file.originalname.replace(/\s/g, '_')}`;
     const { error } = await this.supabase.storage
       .from('resumes')
       .upload(fileName, file.buffer, { contentType: file.mimetype });
@@ -87,6 +87,23 @@ export class ApplicationsService {
     });
   }
 
+  // --- FITUR 2.5: CEK APAKAH SUDAH APPLY ---
+  async hasApplied(jobId: string, email: string) {
+    const existing = await this.prisma.application.findFirst({
+      where: { jobId, email },
+    });
+    return { hasApplied: !!existing };
+  }
+
+  // --- FITUR 2.6: GET ALL APPLIED JOB IDs ---
+  async getAppliedJobIds(email: string) {
+    const applications = await this.prisma.application.findMany({
+      where: { email },
+      select: { jobId: true },
+    });
+    return applications.map((app) => app.jobId);
+  }
+
   // --- FITUR 3: GENERATE DRAFT EMAIL ---
   async generateEmailDraft(
     appId: string,
@@ -118,20 +135,34 @@ export class ApplicationsService {
     return { draft: draftBody, emailTo: app.email, subject };
   }
 
-  // --- FITUR 4: KIRIM EMAIL BENERAN ---
-  async sendRealEmail(to: string, subject: string, message: string) {
+  // --- FITUR 4: KIRIM EMAIL BENERAN + UPDATE STATUS ---
+  async sendRealEmail(
+    appId: string,
+    to: string,
+    subject: string,
+    message: string,
+    status: 'accepted' | 'rejected', // Tambahkan status baru
+  ) {
     try {
+      // 1. Kirim Email
       await this.transporter.sendMail({
         from: `"HR Team - Maya" <${process.env.EMAIL_USER}>`,
         to,
         subject,
-        text: message, // Kirim sebagai Plain Text
+        text: message,
       });
-      return { success: true, message: 'Email terkirim!' };
+
+      // 2. Update Status di DB
+      await this.prisma.application.update({
+        where: { id: appId },
+        data: { status },
+      });
+
+      return { success: true, message: 'Email terkirim & Status diupdate!' };
     } catch (error) {
       console.error('Email Error:', error);
       throw new BadRequestException(
-        'Gagal mengirim email. Cek konfigurasi server.',
+        `Gagal mengirim email: ${error.message || error}`,
       );
     }
   }

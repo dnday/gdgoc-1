@@ -1,7 +1,7 @@
 "use client";
 
 import Cookies from "js-cookie";
-import { Briefcase, Plus, Search, Users } from "lucide-react";
+import { Briefcase, Plus, Search, Users, Check, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import AccountDropdown from "@/components/AccountDropdown";
@@ -15,6 +15,10 @@ interface ApiJob {
   requirements: string;
   isActive: boolean;
   createdAt: string;
+  recruiter?: {
+    name?: string;
+    email?: string;
+  };
   _count: {
     applications: number;
   };
@@ -30,6 +34,7 @@ interface Job {
   skills: string[];
   status: "Open" | "Closed";
   applicantsCount: number;
+  recruiterName: string;
 }
 
 type FilterType = "All" | "Open" | "Closed";
@@ -84,6 +89,7 @@ export default function Dashboard() {
         skills: parseSkills(job.requirements),
         status: job.isActive ? "Open" : "Closed",
         applicantsCount: job._count?.applications || 0,
+        recruiterName: job.recruiter?.name || "Unknown Recruiter",
       }));
 
       setJobs(transformedJobs);
@@ -124,14 +130,67 @@ export default function Dashboard() {
     return matchesFilter && matchesSearch;
   });
 
-  const handleToggleStatus = (jobId: string) => {
+  const handleToggleStatus = async (jobId: string) => {
+    // 1. Find the job and current status
+    const job = jobs.find((j) => j.id === jobId);
+    if (!job) return;
+
+    const newStatus = job.status === "Open" ? "Closed" : "Open";
+    const isActive = newStatus === "Open";
+
+    // 2. Optimistic Update
     setJobs((prev) =>
-      prev.map((job) =>
-        job.id === jobId
-          ? { ...job, status: job.status === "Open" ? "Closed" : "Open" }
-          : job,
-      ),
+      prev.map((j) => (j.id === jobId ? { ...j, status: newStatus } : j)),
     );
+
+    try {
+      // 3. Call API
+      const res = await fetch(`http://localhost:3000/jobs/${jobId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive }),
+      });
+
+      if (!res.ok) throw new Error("Failed to update status");
+    } catch (error) {
+      console.error("Failed to update job status:", error);
+      alert("Failed to update job status. Please try again.");
+
+      // 4. Revert on failure
+      setJobs((prev) =>
+        prev.map(
+          (j) => (j.id === jobId ? { ...j, status: job.status } : j), // Revert to old status
+        ),
+      );
+    }
+  };
+
+  const handleDeleteJob = async (jobId: string) => {
+    if (
+      !confirm(
+        "Are you sure you want to delete this job? This action cannot be undone.",
+      )
+    )
+      return;
+
+    // 1. Optimistic Update
+    const previousJobs = [...jobs];
+    setJobs((prev) => prev.filter((j) => j.id !== jobId));
+
+    try {
+      // 2. Call API
+      const res = await fetch(`http://localhost:3000/jobs/${jobId}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) throw new Error("Failed to delete job");
+    } catch (error) {
+      console.error("Failed to delete job:", error);
+      alert("Failed to delete job. Please try again.");
+
+      // 3. Revert on failure
+      setJobs(previousJobs);
+    }
   };
 
   if (loading) {
@@ -147,7 +206,18 @@ export default function Dashboard() {
       <main className="max-w-4xl mx-auto px-4 py-6 sm:p-8">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
-          <div>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="bg-gray-900 text-white p-2 rounded-lg shadow-sm">
+                <Check
+                  className="w-5 h-5"
+                  strokeWidth={3}
+                />
+              </div>
+              <span className="text-xl font-extrabold text-gray-900 tracking-tight">
+                RecruitPro
+              </span>
+            </div>
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
               Job Vacancies
             </h1>
@@ -222,36 +292,76 @@ export default function Dashboard() {
                   {/* Content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4">
-                      <div className="flex-1">
-                        <h3 className="text-base sm:text-lg font-semibold text-gray-900">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-base sm:text-lg font-semibold text-gray-900 truncate">
                           {job.title}
                         </h3>
-                        <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
-                          Posted {job.postedAgo}
-                        </p>
+                        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-0.5 text-xs sm:text-sm text-gray-500">
+                          <span
+                            className="truncate max-w-[150px]"
+                            title={job.recruiterName}>
+                            by {job.recruiterName}
+                          </span>
+                          <span className="hidden sm:inline">•</span>
+                          <span className="hidden sm:inline">
+                            Posted {job.postedAgo}
+                          </span>
+                        </div>
                       </div>
 
                       {/* Actions & Status */}
-                      <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleToggleStatus(job.id);
-                          }}
-                          className="text-xs sm:text-sm font-medium text-blue-600 hover:text-blue-700">
-                          {job.status === "Open" ? "Close" : "Reopen"}
-                        </button>
+                      <div className="flex items-center gap-3 sm:gap-4 flex-shrink-0">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteJob(job.id);
+                            }}
+                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                            title="Delete Job">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                          <div className="h-4 w-px bg-gray-200" />{" "}
+                          {/* Divider */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleStatus(job.id);
+                            }}
+                            className={`text-xs sm:text-sm font-medium px-3 py-1.5 rounded-lg transition-colors ${
+                              job.status === "Open"
+                                ? "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                                : "text-blue-600 hover:bg-blue-50 hover:text-blue-700"
+                            }`}>
+                            {job.status === "Open" ? "Close Job" : "Reopen Job"}
+                          </button>
+                        </div>
+
                         <span
-                          className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-full ${
+                          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm font-medium rounded-full border ${
                             job.status === "Open"
-                              ? "bg-emerald-50 text-emerald-600"
-                              : "bg-gray-100 text-gray-600"
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                              : "bg-gray-50 text-gray-600 border-gray-200"
                           }`}>
                           {job.status === "Open" && (
-                            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+                            <span className="relative flex h-2 w-2">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                            </span>
                           )}
                           {job.status}
                         </span>
+
+                        {/* Applicants Count - desktop only */}
+                        <div className="hidden sm:flex items-center gap-2 text-gray-500 pl-2 ml-2 border-l border-gray-100">
+                          <Users className="w-4 h-4" />
+                          <span className="text-sm">
+                            <span className="font-semibold text-gray-900">
+                              {job.applicantsCount}
+                            </span>{" "}
+                            applicants
+                          </span>
+                        </div>
                       </div>
                     </div>
 
@@ -281,17 +391,6 @@ export default function Dashboard() {
                         applicants
                       </span>
                     </div>
-                  </div>
-
-                  {/* Applicants Count - desktop only */}
-                  <div className="hidden sm:flex items-center gap-2 text-gray-500 flex-shrink-0">
-                    <Users className="w-4 h-4" />
-                    <span className="text-sm">
-                      <span className="font-semibold text-gray-900">
-                        {job.applicantsCount}
-                      </span>{" "}
-                      applicants
-                    </span>
                   </div>
                 </div>
               </div>

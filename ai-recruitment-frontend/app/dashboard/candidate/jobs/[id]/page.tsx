@@ -73,9 +73,28 @@ export default function CandidateJobDetailPage() {
     }
   }, [jobId]);
 
+  // Check if already applied
+  const checkApplied = useCallback(async () => {
+    const email = localStorage.getItem("userEmail");
+    if (!email || !jobId) return;
+
+    try {
+      const res = await fetch(
+        `http://localhost:3000/applications/check/${jobId}/${encodeURIComponent(email)}`,
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setApplied(data.hasApplied);
+      }
+    } catch (err) {
+      console.error("❌ Failed to check application status:", err);
+    }
+  }, [jobId]);
+
   useEffect(() => {
     fetchJob();
-  }, [fetchJob]);
+    checkApplied();
+  }, [fetchJob, checkApplied]);
 
   if (loading) {
     return (
