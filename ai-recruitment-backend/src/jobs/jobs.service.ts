@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 
 @Injectable()
@@ -16,6 +16,30 @@ export class JobsService {
         },
       },
     });
+  }
+
+  // Ambil satu job berdasarkan ID + semua aplikasi
+  async findById(id: string) {
+    const job = await this.prisma.job.findUnique({
+      where: { id },
+      include: {
+        recruiter: {
+          select: { name: true, email: true },
+        },
+        applications: {
+          orderBy: { createdAt: 'desc' },
+        },
+        _count: {
+          select: { applications: true },
+        },
+      },
+    });
+
+    if (!job) {
+      throw new NotFoundException('Job not found');
+    }
+
+    return job;
   }
 
   // Buat job baru & hubungkan ke User ID

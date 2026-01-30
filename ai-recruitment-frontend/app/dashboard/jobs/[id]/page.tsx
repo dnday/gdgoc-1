@@ -1,10 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+import { useRouter, useParams } from "next/navigation";
 import {
   ArrowLeft,
-  MapPin,
   Briefcase,
   Users,
   Search,
@@ -20,125 +19,78 @@ import {
   Calendar,
   Download,
   Edit3,
+  Clock,
 } from "lucide-react";
 
-// --- Mock Data ---
-
-const JOB_DETAILS = {
-  id: "JOB-2024-001",
-  title: "Senior Product Designer",
-  location: "Remote (US/EU)",
-  type: "Full-time",
-  status: "Open",
-  postedDate: "Oct 12, 2023",
-  description:
-    "We are looking for an experienced Product Designer to lead our design system initiative and mentor junior designers.",
-  skills: ["Figma", "React", "Design Systems", "Prototyping"],
-  stats: {
-    total: 45,
-    shortlisted: 12,
-    accepted: 1,
-    rejected: 15,
-  },
-};
-
-interface Candidate {
-  id: number;
-  name: string;
-  file: string;
-  score: number;
-  status: string;
-  uploaded: string;
-  topSkills: string[];
+// --- Types ---
+interface Application {
+  id: string;
+  candidateName: string;
   email: string;
-  aiSummary: string;
-  aiMatchBreakdown: Array<{
-    criterion: string;
-    status: "pass" | "warning" | "fail";
-    note: string;
-  }>;
+  resumeUrl: string;
+  resumeText?: string;
+  skillsExtracted: string[];
+  summary?: string;
+  matchScore?: number;
+  matchExplanation?: string;
+  status: string;
+  createdAt: string;
 }
 
-const CANDIDATES: Candidate[] = [
-  {
-    id: 1,
-    name: "Sarah Jenkins",
-    file: "sarah_j_resume.pdf",
-    score: 94,
-    status: "Shortlisted",
-    uploaded: "2h ago",
-    topSkills: ["Figma", "React", "Design Systems"],
-    email: "sarah.j@example.com",
-    aiSummary:
-      "Strong alignment with Senior role. 7 years experience. Previously led a design system overhaul at a Fintech unicorn.",
-    aiMatchBreakdown: [
-      { criterion: "Experience", status: "pass", note: "7+ years (Req: 5+)" },
-      { criterion: "Skills", status: "pass", note: "Matches 4/5 key skills" },
-      {
-        criterion: "Leadership",
-        status: "warning",
-        note: "Limited direct management exp",
-      },
-    ],
-  },
-  {
-    id: 2,
-    name: "Michael Chen",
-    file: "m_chen_cv_v2.pdf",
-    score: 88,
-    status: "New",
-    uploaded: "1d ago",
-    topSkills: ["Sketch", "HTML/CSS", "UX Research"],
-    email: "m.chen@example.com",
-    aiSummary:
-      "Solid UX background. Technical skills match, but primary tool is Sketch, not Figma. fast learner based on certifications.",
-    aiMatchBreakdown: [
-      { criterion: "Experience", status: "pass", note: "6 years" },
-      {
-        criterion: "Skills",
-        status: "warning",
-        note: "Missing Figma proficiency",
-      },
-    ],
-  },
-  {
-    id: 3,
-    name: "Jessica Alu",
-    file: "jess_alu_portfolio.pdf",
-    score: 65,
-    status: "Rejected",
-    uploaded: "3d ago",
-    topSkills: ["Marketing", "Canva", "Social Media"],
-    email: "j.alu@example.com",
-    aiSummary:
-      "Background is primarily marketing/graphic design, lacking product design depth required for this role.",
-    aiMatchBreakdown: [
-      {
-        criterion: "Experience",
-        status: "fail",
-        note: "Relevant exp < 2 years",
-      },
-    ],
-  },
-];
+interface ApiJob {
+  id: string;
+  title: string;
+  description: string;
+  requirements: string;
+  isActive: boolean;
+  createdAt: string;
+  recruiter?: { name?: string; email?: string };
+  applications: Application[];
+  _count: { applications: number };
+}
+
+// Helper function to calculate "posted ago"
+function getPostedAgo(dateString: string): string {
+  const now = new Date();
+  const posted = new Date(dateString);
+  const diffMs = now.getTime() - posted.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+  const diffWeeks = Math.floor(diffDays / 7);
+
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return `${diffWeeks}w ago`;
+}
+
+// Parse requirements string to skills array
+function parseSkills(requirements: string): string[] {
+  return requirements
+    .split(/[,\n•\-]+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0 && s.length < 30)
+    .slice(0, 5);
+}
 
 // --- Components ---
-
 const StatusBadge = ({ status }: { status: string }) => {
   const styles: Record<string, string> = {
     Open: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
     Closed: "bg-gray-100 text-gray-600 ring-gray-500/10",
-    New: "bg-blue-50 text-blue-700 ring-blue-700/10",
-    Shortlisted: "bg-purple-50 text-purple-700 ring-purple-700/10",
-    Accepted: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
-    Rejected: "bg-red-50 text-red-700 ring-red-600/10",
+    applied: "bg-blue-50 text-blue-700 ring-blue-700/10",
+    shortlisted: "bg-purple-50 text-purple-700 ring-purple-700/10",
+    accepted: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
+    rejected: "bg-red-50 text-red-700 ring-red-600/10",
   };
+  const displayStatus = status.charAt(0).toUpperCase() + status.slice(1);
   return (
     <span
       className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ring-1 ring-inset ${
-        styles[status] || styles.Open
+        styles[status] || styles.applied
       }`}>
-      {status}
+      {displayStatus}
     </span>
   );
 };
@@ -162,7 +114,8 @@ const MatchScore = ({ score }: { score: number }) => {
       <div className="flex-1 w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
         <div
           className={`h-full ${barColor}`}
-          style={{ width: `${score}%` }}></div>
+          style={{ width: `${score}%` }}
+        />
       </div>
       <span className={`text-xs font-bold ${color}`}>{score}%</span>
     </div>
@@ -170,37 +123,94 @@ const MatchScore = ({ score }: { score: number }) => {
 };
 
 // --- Main Page Component ---
-
 export default function JobDetailPage() {
   const router = useRouter();
+  const params = useParams();
+  const jobId = params.id as string;
+
+  const [loading, setLoading] = useState(true);
+  const [job, setJob] = useState<ApiJob | null>(null);
   const [activeTab, setActiveTab] = useState("All");
-  const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(
-    null,
-  );
+  const [selectedCandidate, setSelectedCandidate] =
+    useState<Application | null>(null);
   const [emailModal, setEmailModal] = useState<{
     isOpen: boolean;
     type: string;
-    candidate: Candidate | null;
+    candidate: Application | null;
   }>({ isOpen: false, type: "", candidate: null });
-  const [jobStatus, setJobStatus] = useState(JOB_DETAILS.status);
+  const [jobStatus, setJobStatus] = useState<"Open" | "Closed">("Open");
+  const [searchQuery, setSearchQuery] = useState("");
 
-  // Filter Logic
-  const filteredCandidates =
-    activeTab === "All"
-      ? CANDIDATES
-      : CANDIDATES.filter((c) => {
-          if (activeTab === "Shortlisted") return c.status === "Shortlisted";
-          if (activeTab === "Accepted") return c.status === "Accepted";
-          if (activeTab === "Rejected") return c.status === "Rejected";
-          return true;
-        });
+  // Fetch job data
+  const fetchJob = useCallback(async () => {
+    try {
+      const res = await fetch(`http://localhost:3000/jobs/${jobId}`);
+      if (!res.ok) throw new Error("Job not found");
+      const data: ApiJob = await res.json();
+      setJob(data);
+      setJobStatus(data.isActive ? "Open" : "Closed");
+      console.log("✅ Fetched job:", data.title);
+    } catch (err) {
+      console.error("❌ Failed to fetch job:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [jobId]);
 
-  const handleDecision = (type: string, candidate: Candidate) => {
-    setEmailModal({
-      isOpen: true,
-      type,
-      candidate,
-    });
+  useEffect(() => {
+    fetchJob();
+  }, [fetchJob]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-pulse text-gray-500">
+          Loading job details...
+        </div>
+      </div>
+    );
+  }
+
+  if (!job) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center">
+        <Briefcase className="w-16 h-16 text-gray-300 mb-4" />
+        <h2 className="text-xl font-bold text-gray-900 mb-2">Job Not Found</h2>
+        <p className="text-gray-500 mb-4">
+          The job you're looking for doesn't exist.
+        </p>
+        <button
+          onClick={() => router.back()}
+          className="px-4 py-2 bg-gray-900 text-white rounded-lg font-medium">
+          Go Back
+        </button>
+      </div>
+    );
+  }
+
+  const skills = parseSkills(job.requirements);
+  const candidates = job.applications || [];
+
+  // Filter candidates
+  const filteredCandidates = candidates.filter((c) => {
+    const matchesTab =
+      activeTab === "All" || c.status.toLowerCase() === activeTab.toLowerCase();
+    const matchesSearch =
+      c.candidateName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.email.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesTab && matchesSearch;
+  });
+
+  // Stats
+  const stats = {
+    total: candidates.length,
+    shortlisted: candidates.filter((c) => c.status === "shortlisted").length,
+    accepted: candidates.filter((c) => c.status === "accepted").length,
+    rejected: candidates.filter((c) => c.status === "rejected").length,
+  };
+
+  const handleDecision = (type: string, candidate: Application) => {
+    setEmailModal({ isOpen: true, type, candidate });
   };
 
   const closeEmailModal = () => {
@@ -209,7 +219,7 @@ export default function JobDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-slate-900 flex flex-col">
-      {/* 1. Sticky Job Header */}
+      {/* Sticky Job Header */}
       <header className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-start justify-between">
@@ -222,20 +232,17 @@ export default function JobDetailPage() {
               <div>
                 <div className="flex items-center gap-3">
                   <h1 className="text-xl font-bold text-slate-900">
-                    {JOB_DETAILS.title}
+                    {job.title}
                   </h1>
                   <StatusBadge status={jobStatus} />
                 </div>
                 <div className="flex items-center gap-4 mt-1 text-sm text-slate-500">
                   <span className="flex items-center gap-1.5">
-                    <MapPin className="w-4 h-4" /> {JOB_DETAILS.location}
+                    <Clock className="w-4 h-4" /> Posted{" "}
+                    {getPostedAgo(job.createdAt)}
                   </span>
                   <span className="flex items-center gap-1.5">
-                    <Briefcase className="w-4 h-4" /> {JOB_DETAILS.type}
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <Users className="w-4 h-4" /> {JOB_DETAILS.stats.total}{" "}
-                    Candidates
+                    <Users className="w-4 h-4" /> {stats.total} Candidates
                   </span>
                 </div>
               </div>
@@ -264,17 +271,17 @@ export default function JobDetailPage() {
           className={`flex-1 min-w-0 transition-all duration-300 ${
             selectedCandidate ? "mr-0 lg:mr-[400px]" : ""
           }`}>
-          {/* 2. Job Summary Section */}
+          {/* Job Summary Section */}
           <section className="bg-white rounded-xl border border-gray-200 p-6 mb-8">
             <p className="text-sm text-slate-600 mb-4 leading-relaxed max-w-3xl">
-              {JOB_DETAILS.description}
+              {job.description}
             </p>
 
             <div className="flex items-center justify-between border-t border-gray-100 pt-4">
-              <div className="flex gap-2">
-                {JOB_DETAILS.skills.map((skill) => (
+              <div className="flex gap-2 flex-wrap">
+                {skills.map((skill, idx) => (
                   <span
-                    key={skill}
+                    key={idx}
                     className="px-2.5 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-md border border-gray-200">
                     {skill}
                   </span>
@@ -283,7 +290,7 @@ export default function JobDetailPage() {
               <div className="flex gap-6 text-sm">
                 <div className="text-center">
                   <span className="block text-lg font-bold text-slate-900">
-                    {JOB_DETAILS.stats.total}
+                    {stats.total}
                   </span>
                   <span className="text-xs text-slate-500 uppercase tracking-wide">
                     Total
@@ -291,7 +298,7 @@ export default function JobDetailPage() {
                 </div>
                 <div className="text-center">
                   <span className="block text-lg font-bold text-emerald-600">
-                    {JOB_DETAILS.stats.accepted}
+                    {stats.accepted}
                   </span>
                   <span className="text-xs text-slate-500 uppercase tracking-wide">
                     Hired
@@ -299,7 +306,7 @@ export default function JobDetailPage() {
                 </div>
                 <div className="text-center">
                   <span className="block text-lg font-bold text-red-600">
-                    {JOB_DETAILS.stats.rejected}
+                    {stats.rejected}
                   </span>
                   <span className="text-xs text-slate-500 uppercase tracking-wide">
                     Rejected
@@ -309,7 +316,7 @@ export default function JobDetailPage() {
             </div>
           </section>
 
-          {/* 3. & 4. Tabs & Filters */}
+          {/* Tabs & Filters */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div className="flex bg-gray-100/50 p-1 rounded-lg border border-gray-200">
               {["All", "Shortlisted", "Accepted", "Rejected"].map((tab) => (
@@ -332,6 +339,8 @@ export default function JobDetailPage() {
                 <input
                   type="text"
                   placeholder="Search candidates..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg w-48 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
                 />
               </div>
@@ -345,82 +354,98 @@ export default function JobDetailPage() {
             </div>
           </div>
 
-          {/* 5. Candidate List */}
+          {/* Candidate List */}
           <div className="space-y-3">
-            {filteredCandidates.map((candidate) => (
-              <div
-                key={candidate.id}
-                onClick={() => setSelectedCandidate(candidate)}
-                className={`group relative bg-white rounded-xl border p-4 transition-all cursor-pointer hover:shadow-md ${
-                  selectedCandidate?.id === candidate.id
-                    ? "border-indigo-500 ring-1 ring-indigo-500 shadow-md"
-                    : "border-gray-200 hover:border-indigo-200"
-                }`}>
-                <div className="flex items-center justify-between">
-                  {/* Left: Info */}
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-sm">
-                      {candidate.name.charAt(0)}
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
-                        {candidate.name}
-                      </h3>
-                      <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
-                        <FileText className="w-3 h-3" />
-                        <span className="truncate max-w-[150px]">
-                          {candidate.file}
-                        </span>
-                        <span>•</span>
-                        <span>{candidate.uploaded}</span>
+            {filteredCandidates.length === 0 ? (
+              <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
+                <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500">No candidates found.</p>
+                {candidates.length === 0 && (
+                  <p className="text-sm text-gray-400 mt-1">
+                    Share this job to start receiving applications!
+                  </p>
+                )}
+              </div>
+            ) : (
+              filteredCandidates.map((candidate) => (
+                <div
+                  key={candidate.id}
+                  onClick={() => setSelectedCandidate(candidate)}
+                  className={`group relative bg-white rounded-xl border p-4 transition-all cursor-pointer hover:shadow-md ${
+                    selectedCandidate?.id === candidate.id
+                      ? "border-indigo-500 ring-1 ring-indigo-500 shadow-md"
+                      : "border-gray-200 hover:border-indigo-200"
+                  }`}>
+                  <div className="flex items-center justify-between">
+                    {/* Left: Info */}
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-sm">
+                        {candidate.candidateName.charAt(0)}
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                          {candidate.candidateName}
+                        </h3>
+                        <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
+                          <Mail className="w-3 h-3" />
+                          <span className="truncate max-w-[200px]">
+                            {candidate.email}
+                          </span>
+                          <span>•</span>
+                          <span>{getPostedAgo(candidate.createdAt)}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Middle: AI Score & Skills */}
-                  <div className="hidden md:flex items-center gap-8">
-                    <div className="flex flex-col w-32">
-                      <span className="text-[10px] font-semibold text-gray-400 uppercase mb-1 flex items-center gap-1">
-                        <Sparkles className="w-3 h-3 text-indigo-400" /> Match
-                        Score
-                      </span>
-                      <MatchScore score={candidate.score} />
-                    </div>
-                    <div className="flex gap-1.5">
-                      {candidate.topSkills.slice(0, 2).map((skill, i) => (
-                        <span
-                          key={i}
-                          className="px-2 py-0.5 bg-gray-50 border border-gray-100 rounded text-xs text-gray-600">
-                          {skill}
-                        </span>
-                      ))}
-                      {candidate.topSkills.length > 2 && (
-                        <span className="text-xs text-gray-400 px-1">
-                          +{candidate.topSkills.length - 2}
-                        </span>
+                    {/* Middle: AI Score & Skills */}
+                    <div className="hidden md:flex items-center gap-8">
+                      {candidate.matchScore && (
+                        <div className="flex flex-col w-32">
+                          <span className="text-[10px] font-semibold text-gray-400 uppercase mb-1 flex items-center gap-1">
+                            <Sparkles className="w-3 h-3 text-indigo-400" />{" "}
+                            Match Score
+                          </span>
+                          <MatchScore score={candidate.matchScore} />
+                        </div>
                       )}
+                      <div className="flex gap-1.5">
+                        {candidate.skillsExtracted
+                          .slice(0, 2)
+                          .map((skill, i) => (
+                            <span
+                              key={i}
+                              className="px-2 py-0.5 bg-gray-50 border border-gray-100 rounded text-xs text-gray-600">
+                              {skill}
+                            </span>
+                          ))}
+                        {candidate.skillsExtracted.length > 2 && (
+                          <span className="text-xs text-gray-400 px-1">
+                            +{candidate.skillsExtracted.length - 2}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Right: Status & Action */}
-                  <div className="flex items-center gap-4">
-                    <StatusBadge status={candidate.status} />
-                    <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-gray-500" />
+                    {/* Right: Status & Action */}
+                    <div className="flex items-center gap-4">
+                      <StatusBadge status={candidate.status} />
+                      <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-gray-500" />
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 
-        {/* 6. Candidate Detail Side Panel (Slide Over) */}
+        {/* Candidate Detail Side Panel */}
         {selectedCandidate && (
           <aside className="fixed inset-y-0 right-0 w-[420px] bg-white shadow-2xl border-l border-gray-200 transform transition-transform duration-300 z-40 overflow-hidden flex flex-col">
             {/* Panel Header */}
             <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-start justify-between">
               <div>
                 <h2 className="text-lg font-bold text-slate-900">
-                  {selectedCandidate.name}
+                  {selectedCandidate.candidateName}
                 </h2>
                 <div className="flex items-center gap-2 text-sm text-slate-500 mt-1">
                   <Mail className="w-3.5 h-3.5" /> {selectedCandidate.email}
@@ -437,81 +462,71 @@ export default function JobDetailPage() {
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
               {/* Actions Toolbar */}
               <div className="grid grid-cols-2 gap-3">
-                <button className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-gray-50">
-                  <Download className="w-4 h-4" /> CV PDF
-                </button>
+                <a
+                  href={selectedCandidate.resumeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-gray-50">
+                  <Download className="w-4 h-4" /> View Resume
+                </a>
                 <button className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-gray-50">
                   <Calendar className="w-4 h-4" /> Interview
                 </button>
               </div>
 
               {/* AI Insight Section */}
-              <div className="bg-indigo-50/50 rounded-xl p-5 border border-indigo-100">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-indigo-600" />
-                    <h3 className="text-sm font-bold text-indigo-900">
-                      AI Analysis
-                    </h3>
-                  </div>
-                  <span className="text-2xl font-bold text-slate-900">
-                    {selectedCandidate.score}%
-                  </span>
-                </div>
-
-                <p className="text-sm text-slate-700 mb-4 leading-relaxed">
-                  {selectedCandidate.aiSummary}
-                </p>
-
-                <div className="space-y-2">
-                  {selectedCandidate.aiMatchBreakdown?.map((item, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center justify-between text-xs bg-white p-2 rounded border border-indigo-50">
-                      <span className="font-medium text-slate-700">
-                        {item.criterion}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-slate-500">{item.note}</span>
-                        {item.status === "pass" && (
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                        )}
-                        {item.status === "warning" && (
-                          <div className="w-2 h-2 rounded-full bg-amber-400" />
-                        )}
-                        {item.status === "fail" && (
-                          <XCircle className="w-3.5 h-3.5 text-red-500" />
-                        )}
-                      </div>
+              {(selectedCandidate.matchScore || selectedCandidate.summary) && (
+                <div className="bg-indigo-50/50 rounded-xl p-5 border border-indigo-100">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-indigo-600" />
+                      <h3 className="text-sm font-bold text-indigo-900">
+                        AI Analysis
+                      </h3>
                     </div>
-                  ))}
-                </div>
-              </div>
+                    {selectedCandidate.matchScore && (
+                      <span className="text-2xl font-bold text-slate-900">
+                        {selectedCandidate.matchScore}%
+                      </span>
+                    )}
+                  </div>
 
-              {/* Skills (Editable Mock) */}
+                  {selectedCandidate.summary && (
+                    <p className="text-sm text-slate-700 mb-4 leading-relaxed">
+                      {selectedCandidate.summary}
+                    </p>
+                  )}
+
+                  {selectedCandidate.matchExplanation && (
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      {selectedCandidate.matchExplanation}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Skills */}
               <div>
                 <h3 className="text-sm font-bold text-slate-900 mb-3">
                   Extracted Skills
                 </h3>
                 <div className="flex flex-wrap gap-2">
-                  {selectedCandidate.topSkills.map((skill, i) => (
-                    <span
-                      key={i}
-                      className="group flex items-center gap-1 px-3 py-1 bg-white border border-gray-200 rounded-full text-xs font-medium text-slate-600">
-                      {skill}
-                      <button className="opacity-0 group-hover:opacity-100 hover:text-red-500">
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
-                  ))}
-                  <button className="px-3 py-1 border border-dashed border-gray-300 rounded-full text-xs text-gray-500 hover:border-indigo-300 hover:text-indigo-600">
-                    + Add
-                  </button>
+                  {selectedCandidate.skillsExtracted.length > 0 ? (
+                    selectedCandidate.skillsExtracted.map((skill, i) => (
+                      <span
+                        key={i}
+                        className="px-3 py-1 bg-white border border-gray-200 rounded-full text-xs font-medium text-slate-600">
+                        {skill}
+                      </span>
+                    ))
+                  ) : (
+                    <p className="text-sm text-gray-400">No skills extracted</p>
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* 7. Footer: Decision Actions */}
+            {/* Footer: Decision Actions */}
             <div className="p-6 border-t border-gray-100 bg-white">
               <div className="grid grid-cols-2 gap-3">
                 <button
@@ -579,8 +594,8 @@ export default function JobDetailPage() {
                     className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none outline-none"
                     defaultValue={
                       emailModal.type === "accept"
-                        ? `Hi ${emailModal.candidate?.name},\n\nWe were impressed by your profile and would love to move forward...`
-                        : `Hi ${emailModal.candidate?.name},\n\nThank you for your interest. Unfortunately, we have decided to proceed with other candidates...`
+                        ? `Hi ${emailModal.candidate?.candidateName},\n\nWe were impressed by your profile and would love to move forward...`
+                        : `Hi ${emailModal.candidate?.candidateName},\n\nThank you for your interest. Unfortunately, we have decided to proceed with other candidates...`
                     }
                   />
                 </div>

@@ -5,6 +5,7 @@ import {
   Body,
   UseGuards,
   Request,
+  Param,
 } from '@nestjs/common';
 import { JobsService } from './jobs.service'; // Panggil Service, bukan Prisma langsung
 import { AuthGuard } from '@nestjs/passport';
@@ -16,6 +17,11 @@ export class JobsController {
   @Get()
   async getAllJobs() {
     return this.jobsService.findAll();
+  }
+
+  @Get(':id')
+  async getJobById(@Param('id') id: string) {
+    return this.jobsService.findById(id);
   }
 
   @UseGuards(AuthGuard('jwt'))
