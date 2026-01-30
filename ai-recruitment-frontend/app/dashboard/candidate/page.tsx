@@ -3,56 +3,88 @@
 import Cookies from "js-cookie";
 import { Briefcase, Clock, MapPin, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import AccountDropdown from "@/components/AccountDropdown";
 
-// Job type definition
+// API Job type from backend
+interface ApiJob {
+  id: string;
+  title: string;
+  description: string;
+  requirements: string;
+  isActive: boolean;
+  createdAt: string;
+  recruiter?: {
+    name?: string;
+    email?: string;
+  };
+}
+
+// Frontend Job type
 interface Job {
   id: string;
   title: string;
   company: string;
-  location: string;
+  description: string;
   postedAgo: string;
   skills: string[];
   type: string;
 }
 
-// Mock jobs data for candidates
-const mockJobs: Job[] = [
-  {
-    id: "1",
-    title: "Senior Product Designer",
-    company: "Tech Corp",
-    location: "Remote",
-    postedAgo: "2d ago",
-    skills: ["Figma", "React", "UX Research"],
-    type: "Full-time",
-  },
-  {
-    id: "2",
-    title: "Frontend Engineer",
-    company: "StartupXYZ",
-    location: "San Francisco, CA",
-    postedAgo: "5d ago",
-    skills: ["TypeScript", "Tailwind", "Next.js"],
-    type: "Full-time",
-  },
-  {
-    id: "3",
-    title: "Backend Developer",
-    company: "DevCo",
-    location: "New York, NY",
-    postedAgo: "1w ago",
-    skills: ["Node.js", "PostgreSQL", "Docker"],
-    type: "Contract",
-  },
-];
+// Helper function to calculate "posted ago"
+function getPostedAgo(dateString: string): string {
+  const now = new Date();
+  const posted = new Date(dateString);
+  const diffMs = now.getTime() - posted.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+  const diffWeeks = Math.floor(diffDays / 7);
+
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return `${diffWeeks}w ago`;
+}
+
+// Parse requirements string to skills array
+function parseSkills(requirements: string): string[] {
+  return requirements
+    .split(/[,\n•\-]+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0 && s.length < 30)
+    .slice(0, 5);
+}
 
 export default function CandidateDashboard() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [jobs, setJobs] = useState<Job[]>(mockJobs);
+  const [jobs, setJobs] = useState<Job[]>([]);
+
+  // Fetch jobs from API
+  const fetchJobs = useCallback(async () => {
+    try {
+      const res = await fetch("http://localhost:3000/jobs");
+      const data: ApiJob[] = await res.json();
+
+      // Transform API data to frontend format
+      const transformedJobs: Job[] = data.map((job) => ({
+        id: job.id,
+        title: job.title,
+        company: job.recruiter?.name || "Company",
+        description: job.description,
+        postedAgo: getPostedAgo(job.createdAt),
+        skills: parseSkills(job.requirements),
+        type: "Full-time", // Default type since not in API
+      }));
+
+      setJobs(transformedJobs);
+      console.log("✅ Candidate: Fetched", transformedJobs.length, "jobs");
+    } catch (err) {
+      console.error("❌ Failed to fetch jobs:", err);
+    }
+  }, []);
 
   useEffect(() => {
     // Check both cookie and localStorage
@@ -62,7 +94,6 @@ export default function CandidateDashboard() {
     const token = tokenFromCookie || tokenFromStorage;
 
     console.log("Candidate Dashboard - Checking auth...");
-    console.log("Token found:", token ? "YES" : "NO");
 
     if (!token) {
       console.log("❌ No token, redirecting to login");
@@ -71,14 +102,15 @@ export default function CandidateDashboard() {
     }
 
     console.log("✅ Token found, loading dashboard");
+    fetchJobs();
     setLoading(false);
-  }, [router]);
+  }, [router, fetchJobs]);
 
   const filteredJobs = jobs.filter(
     (job) =>
       job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       job.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      job.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      job.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
       job.skills.some((skill) =>
         skill.toLowerCase().includes(searchQuery.toLowerCase()),
       ),
@@ -127,7 +159,11 @@ export default function CandidateDashboard() {
         <div className="space-y-4">
           {filteredJobs.length === 0 ? (
             <div className="text-center py-12 bg-white rounded-2xl border border-gray-100">
-              <p className="text-gray-500">No jobs found.</p>
+              <Briefcase className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500">No jobs available at the moment.</p>
+              <p className="text-sm text-gray-400 mt-1">
+                Check back later for new opportunities!
+              </p>
             </div>
           ) : (
             filteredJobs.map((job) => (
@@ -159,12 +195,13 @@ export default function CandidateDashboard() {
                       </span>
                     </div>
 
-                    {/* Location & Time */}
+                    {/* Description preview */}
+                    <p className="text-sm text-gray-500 mt-2 line-clamp-2">
+                      {job.description}
+                    </p>
+
+                    {/* Time */}
                     <div className="flex items-center gap-4 mt-3 text-sm text-gray-500">
-                      <div className="flex items-center gap-1.5">
-                        <MapPin className="w-4 h-4" />
-                        {job.location}
-                      </div>
                       <div className="flex items-center gap-1.5">
                         <Clock className="w-4 h-4" />
                         Posted {job.postedAgo}
@@ -172,10 +209,10 @@ export default function CandidateDashboard() {
                     </div>
 
                     {/* Skills */}
-                    <div className="flex items-center gap-2 mt-3">
-                      {job.skills.map((skill) => (
+                    <div className="flex items-center gap-2 mt-3 flex-wrap">
+                      {job.skills.map((skill, index) => (
                         <span
-                          key={skill}
+                          key={index}
                           className="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
                           {skill}
                         </span>

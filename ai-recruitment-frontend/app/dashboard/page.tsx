@@ -3,59 +3,95 @@
 import Cookies from "js-cookie";
 import { Briefcase, Plus, Search, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import AccountDropdown from "@/components/AccountDropdown";
+import CreateJobModal from "@/components/CreateJobModal";
 
-// Job type definition
+// Job type definition from API
+interface ApiJob {
+  id: string;
+  title: string;
+  description: string;
+  requirements: string;
+  isActive: boolean;
+  createdAt: string;
+  _count: {
+    applications: number;
+  };
+}
+
+// Frontend Job type
 interface Job {
   id: string;
   title: string;
-  location: string;
+  description: string;
+  requirements: string;
   postedAgo: string;
   skills: string[];
   status: "Open" | "Closed";
   applicantsCount: number;
 }
 
-// Mock jobs data
-const mockJobs: Job[] = [
-  {
-    id: "1",
-    title: "Senior Product Designer",
-    location: "Remote",
-    postedAgo: "2d ago",
-    skills: ["Figma", "React", "UX Research"],
-    status: "Open",
-    applicantsCount: 42,
-  },
-  {
-    id: "2",
-    title: "Frontend Engineer",
-    location: "San Francisco, CA",
-    postedAgo: "5d ago",
-    skills: ["TypeScript", "Tailwind", "Next.js"],
-    status: "Open",
-    applicantsCount: 18,
-  },
-  {
-    id: "3",
-    title: "Marketing Manager",
-    location: "New York, NY",
-    postedAgo: "2w ago",
-    skills: ["SEO", "Content Strategy"],
-    status: "Closed",
-    applicantsCount: 156,
-  },
-];
-
 type FilterType = "All" | "Open" | "Closed";
+
+// Helper function to calculate "posted ago"
+function getPostedAgo(dateString: string): string {
+  const now = new Date();
+  const posted = new Date(dateString);
+  const diffMs = now.getTime() - posted.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+  const diffWeeks = Math.floor(diffDays / 7);
+
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return `${diffWeeks}w ago`;
+}
+
+// Parse requirements string to skills array
+function parseSkills(requirements: string): string[] {
+  // Split by comma, newline, or common separators
+  return requirements
+    .split(/[,\n•\-]+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0 && s.length < 30)
+    .slice(0, 5); // Max 5 skills displayed
+}
 
 export default function Dashboard() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterType>("All");
   const [searchQuery, setSearchQuery] = useState("");
-  const [jobs, setJobs] = useState<Job[]>(mockJobs);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Fetch jobs from API
+  const fetchJobs = useCallback(async () => {
+    try {
+      const res = await fetch("http://localhost:3000/jobs");
+      const data: ApiJob[] = await res.json();
+
+      // Transform API data to frontend format
+      const transformedJobs: Job[] = data.map((job) => ({
+        id: job.id,
+        title: job.title,
+        description: job.description,
+        requirements: job.requirements,
+        postedAgo: getPostedAgo(job.createdAt),
+        skills: parseSkills(job.requirements),
+        status: job.isActive ? "Open" : "Closed",
+        applicantsCount: job._count?.applications || 0,
+      }));
+
+      setJobs(transformedJobs);
+      console.log("✅ Fetched", transformedJobs.length, "jobs from API");
+    } catch (err) {
+      console.error("❌ Failed to fetch jobs:", err);
+    }
+  }, []);
 
   useEffect(() => {
     // Check both cookie and localStorage
@@ -65,8 +101,6 @@ export default function Dashboard() {
     const token = tokenFromCookie || tokenFromStorage;
 
     console.log("Dashboard - Checking auth...");
-    console.log("Cookie token:", tokenFromCookie ? "EXISTS" : "MISSING");
-    console.log("LocalStorage token:", tokenFromStorage ? "EXISTS" : "MISSING");
 
     if (!token) {
       console.log("❌ No token found, redirecting to login");
@@ -75,14 +109,15 @@ export default function Dashboard() {
     }
 
     console.log("✅ Token found, loading dashboard");
+    fetchJobs();
     setLoading(false);
-  }, [router]);
+  }, [router, fetchJobs]);
 
   const filteredJobs = jobs.filter((job) => {
     const matchesFilter = filter === "All" || job.status === filter;
     const matchesSearch =
       job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      job.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      job.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
       job.skills.some((skill) =>
         skill.toLowerCase().includes(searchQuery.toLowerCase()),
       );
@@ -119,7 +154,9 @@ export default function Dashboard() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <button className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 hover:bg-gray-800 text-white font-medium rounded-xl transition-all">
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 hover:bg-gray-800 text-white font-medium rounded-xl transition-all">
               <Plus className="w-5 h-5" />
               Create New Job
             </button>
@@ -159,7 +196,13 @@ export default function Dashboard() {
         <div className="space-y-4">
           {filteredJobs.length === 0 ? (
             <div className="text-center py-12 bg-white rounded-2xl border border-gray-100">
+              <Briefcase className="w-12 h-12 text-gray-300 mx-auto mb-3" />
               <p className="text-gray-500">No jobs found.</p>
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="mt-4 text-blue-600 font-medium hover:text-blue-700">
+                Create your first job
+              </button>
             </div>
           ) : (
             filteredJobs.map((job) => (
@@ -181,7 +224,7 @@ export default function Dashboard() {
                           {job.title}
                         </h3>
                         <p className="text-sm text-gray-500 mt-0.5">
-                          {job.location} • Posted {job.postedAgo}
+                          Posted {job.postedAgo}
                         </p>
                       </div>
 
@@ -210,10 +253,10 @@ export default function Dashboard() {
                     </div>
 
                     {/* Skills */}
-                    <div className="flex items-center gap-2 mt-3">
-                      {job.skills.map((skill) => (
+                    <div className="flex items-center gap-2 mt-3 flex-wrap">
+                      {job.skills.map((skill, index) => (
                         <span
-                          key={skill}
+                          key={index}
                           className="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
                           {skill}
                         </span>
@@ -237,6 +280,13 @@ export default function Dashboard() {
           )}
         </div>
       </main>
+
+      {/* Create Job Modal */}
+      <CreateJobModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={fetchJobs}
+      />
     </div>
   );
 }
