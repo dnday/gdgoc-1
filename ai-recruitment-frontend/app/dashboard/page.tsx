@@ -4,6 +4,7 @@ import Cookies from "js-cookie";
 import { Briefcase, Plus, Search, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import AccountDropdown from "@/components/AccountDropdown";
 
 // Job type definition
 interface Job {
@@ -59,7 +60,8 @@ export default function Dashboard() {
   useEffect(() => {
     // Check both cookie and localStorage
     const tokenFromCookie = Cookies.get("token");
-    const tokenFromStorage = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const tokenFromStorage =
+      typeof window !== "undefined" ? localStorage.getItem("token") : null;
     const token = tokenFromCookie || tokenFromStorage;
 
     console.log("Dashboard - Checking auth...");
@@ -116,10 +118,13 @@ export default function Dashboard() {
               Manage open positions and track applicant pipelines.
             </p>
           </div>
-          <button className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 hover:bg-gray-800 text-white font-medium rounded-xl transition-all">
-            <Plus className="w-5 h-5" />
-            Create New Job
-          </button>
+          <div className="flex items-center gap-3">
+            <button className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 hover:bg-gray-800 text-white font-medium rounded-xl transition-all">
+              <Plus className="w-5 h-5" />
+              Create New Job
+            </button>
+            <AccountDropdown />
+          </div>
         </div>
 
         {/* Search & Filters */}

@@ -12,6 +12,9 @@ function LoginSuccessContent() {
     const token = searchParams.get("token");
     const roleFromUrl = searchParams.get("role");
     const redirect = searchParams.get("redirect");
+    const nameFromUrl = searchParams.get("name");
+    const emailFromUrl = searchParams.get("email");
+    const pictureFromUrl = searchParams.get("picture");
 
     if (token) {
       // Simpan token ke Cookie (berlaku 1 hari)
@@ -32,15 +35,27 @@ function LoginSuccessContent() {
       }
 
       // Save to localStorage
-      if (typeof window !== "undefined" && finalRole) {
-        localStorage.setItem("userRole", finalRole);
+      if (typeof window !== "undefined") {
+        if (finalRole) localStorage.setItem("userRole", finalRole);
+        if (nameFromUrl)
+          localStorage.setItem("userName", decodeURIComponent(nameFromUrl));
+        if (emailFromUrl)
+          localStorage.setItem("userEmail", decodeURIComponent(emailFromUrl));
+        if (pictureFromUrl)
+          localStorage.setItem(
+            "userPicture",
+            decodeURIComponent(pictureFromUrl),
+          );
+        localStorage.setItem("token", token);
       }
 
       // Redirect berdasarkan role
       const redirectPath =
-        redirect || (finalRole === "candidate" ? "/dashboard/candidate" : "/dashboard");
+        redirect ||
+        (finalRole === "candidate" ? "/dashboard/candidate" : "/dashboard");
 
       console.log("Google OAuth success - Role:", finalRole);
+      console.log("User name:", nameFromUrl);
       console.log("Redirecting to:", redirectPath);
 
       router.push(redirectPath);

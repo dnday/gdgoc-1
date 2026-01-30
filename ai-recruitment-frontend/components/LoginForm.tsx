@@ -40,11 +40,20 @@ export default function LoginForm() {
       if (typeof window !== "undefined") {
         localStorage.setItem("token", data.accessToken);
         localStorage.setItem("userRole", data.user?.role || "recruiter");
+        localStorage.setItem(
+          "userName",
+          data.user?.name || data.user?.email?.split("@")[0] || "User",
+        );
+        localStorage.setItem("userEmail", data.user?.email || "");
+        if (data.user?.picture) {
+          localStorage.setItem("userPicture", data.user.picture);
+        }
       }
 
       console.log("✅ Login success!");
       console.log("Token saved:", data.accessToken.substring(0, 20) + "...");
       console.log("User role:", data.user?.role);
+      console.log("User name:", data.user?.name);
       console.log("Cookie set:", Cookies.get("token") ? "YES" : "NO");
 
       // Redirect berdasarkan role dari response
@@ -53,7 +62,7 @@ export default function LoginForm() {
         userRole === "candidate" ? "/dashboard/candidate" : "/dashboard";
 
       console.log("Redirecting to:", redirectPath);
-      
+
       // Use window.location for more reliable redirect
       window.location.href = redirectPath;
     } catch (err: any) {

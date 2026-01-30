@@ -4,6 +4,7 @@ import Cookies from "js-cookie";
 import { Briefcase, Clock, MapPin, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import AccountDropdown from "@/components/AccountDropdown";
 
 // Job type definition
 interface Job {
@@ -56,7 +57,8 @@ export default function CandidateDashboard() {
   useEffect(() => {
     // Check both cookie and localStorage
     const tokenFromCookie = Cookies.get("token");
-    const tokenFromStorage = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const tokenFromStorage =
+      typeof window !== "undefined" ? localStorage.getItem("token") : null;
     const token = tokenFromCookie || tokenFromStorage;
 
     console.log("Candidate Dashboard - Checking auth...");
@@ -94,13 +96,17 @@ export default function CandidateDashboard() {
     <div className="min-h-screen bg-gray-50">
       <main className="max-w-4xl mx-auto p-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">
-            Find Your Next Opportunity
-          </h1>
-          <p className="text-gray-500 mt-2">
-            Browse available positions and apply to jobs that match your skills
-          </p>
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">
+              Find Your Next Opportunity
+            </h1>
+            <p className="text-gray-500 mt-2">
+              Browse available positions and apply to jobs that match your
+              skills
+            </p>
+          </div>
+          <AccountDropdown />
         </div>
 
         {/* Search */}
@@ -127,9 +133,10 @@ export default function CandidateDashboard() {
             filteredJobs.map((job) => (
               <div
                 key={job.id}
-                onClick={() => router.push(`/dashboard/candidate/jobs/${job.id}`)}
-                className="bg-white rounded-2xl border border-gray-100 p-6 hover:shadow-lg hover:shadow-gray-100/50 transition-all cursor-pointer"
-              >
+                onClick={() =>
+                  router.push(`/dashboard/candidate/jobs/${job.id}`)
+                }
+                className="bg-white rounded-2xl border border-gray-100 p-6 hover:shadow-lg hover:shadow-gray-100/50 transition-all cursor-pointer">
                 <div className="flex items-start gap-4">
                   {/* Icon */}
                   <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -169,8 +176,7 @@ export default function CandidateDashboard() {
                       {job.skills.map((skill) => (
                         <span
                           key={skill}
-                          className="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full"
-                        >
+                          className="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
                           {skill}
                         </span>
                       ))}

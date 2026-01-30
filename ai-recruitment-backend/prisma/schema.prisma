@@ -19,6 +19,7 @@ model User {
   name      String?  // <--- DITAMBAHKAN: Untuk menyimpan Nama User
   password  String?  // (Nullable) Kosong jika login via Google
   picture   String?  // <--- DITAMBAHKAN: Untuk menyimpan Foto Profil Google
+  role      String   @default("recruiter") // <--- Role user (recruiter/candidate)
   
   jobs      Job[]
   
