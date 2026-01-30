@@ -1,18 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import AccountDropdown from "@/components/AccountDropdown";
 import {
   ArrowLeft,
   Briefcase,
-  Clock,
-  Upload,
   CheckCircle,
-  X,
+  Clock,
   FileText,
   Send,
+  Upload,
+  X,
 } from "lucide-react";
-import AccountDropdown from "@/components/AccountDropdown";
+import { useParams, useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
 
 // Types
 interface ApiJob {
@@ -58,6 +58,10 @@ export default function CandidateJobDetailPage() {
   const [job, setJob] = useState<ApiJob | null>(null);
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [applied, setApplied] = useState(false);
+  const [applicationStatus, setApplicationStatus] = useState<string | null>(
+    null,
+  );
+  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
 
   // Fetch job data
   const fetchJob = useCallback(async () => {
@@ -73,18 +77,19 @@ export default function CandidateJobDetailPage() {
     }
   }, [jobId]);
 
-  // Check if already applied
+  // Check if already applied and get status
   const checkApplied = useCallback(async () => {
     const email = localStorage.getItem("userEmail");
     if (!email || !jobId) return;
 
     try {
       const res = await fetch(
-        `http://localhost:3000/applications/check/${jobId}/${encodeURIComponent(email)}`,
+        `http://localhost:3000/applications/status/${jobId}/${encodeURIComponent(email)}`,
       );
       if (res.ok) {
         const data = await res.json();
-        setApplied(data.hasApplied);
+        setApplied(data.applied);
+        setApplicationStatus(data.status);
       }
     } catch (err) {
       console.error("❌ Failed to check application status:", err);
@@ -94,7 +99,16 @@ export default function CandidateJobDetailPage() {
   useEffect(() => {
     fetchJob();
     checkApplied();
-  }, [fetchJob, checkApplied]);
+
+    // Poll for status updates every 5 seconds if applied
+    const interval = setInterval(() => {
+      if (applied) {
+        checkApplied();
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [fetchJob, checkApplied, applied]);
 
   if (loading) {
     return (
@@ -116,7 +130,8 @@ export default function CandidateJobDetailPage() {
         </p>
         <button
           onClick={() => router.back()}
-          className="px-4 py-2 bg-gray-900 text-white rounded-lg font-medium">
+          className="px-4 py-2 bg-gray-900 text-white rounded-lg font-medium"
+        >
           Go Back
         </button>
       </div>
@@ -134,7 +149,8 @@ export default function CandidateJobDetailPage() {
             <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
               <button
                 onClick={() => router.back()}
-                className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg text-slate-500 transition-colors shrink-0">
+                className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg text-slate-500 transition-colors shrink-0"
+              >
                 <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
               <div className="min-w-0 flex-1">
@@ -207,7 +223,8 @@ export default function CandidateJobDetailPage() {
               {skills.map((skill, idx) => (
                 <span
                   key={idx}
-                  className="px-2 sm:px-3 py-1 sm:py-1.5 bg-gray-100 text-gray-700 text-xs sm:text-sm font-medium rounded-full">
+                  className="px-2 sm:px-3 py-1 sm:py-1.5 bg-gray-100 text-gray-700 text-xs sm:text-sm font-medium rounded-full"
+                >
                   {skill}
                 </span>
               ))}
@@ -217,16 +234,54 @@ export default function CandidateJobDetailPage() {
           {/* Apply Section */}
           <div className="p-4 sm:p-6 bg-gray-50">
             {applied ? (
-              <div className="flex items-center justify-center gap-2 sm:gap-3 py-3 sm:py-4">
-                <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-500" />
-                <span className="text-sm sm:text-lg font-medium text-emerald-600">
-                  Application Submitted!
-                </span>
+              <div className="space-y-3">
+                <div className="flex items-center justify-center gap-2 sm:gap-3 py-3 sm:py-4">
+                  <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-500" />
+                  <span className="text-sm sm:text-lg font-medium text-emerald-600">
+                    Application Submitted!
+                  </span>
+                </div>
+                {applicationStatus && applicationStatus !== "applied" && (
+                  <div
+                    className={`p-3 rounded-xl text-center ${
+                      applicationStatus === "accepted"
+                        ? "bg-green-50 border border-green-200"
+                        : applicationStatus === "interview_scheduled"
+                          ? "bg-amber-50 border border-amber-200"
+                          : applicationStatus === "rejected"
+                            ? "bg-red-50 border border-red-200"
+                            : "bg-purple-50 border border-purple-200"
+                    }`}
+                  >
+                    <p
+                      className={`text-sm font-semibold ${
+                        applicationStatus === "accepted"
+                          ? "text-green-700"
+                          : applicationStatus === "interview_scheduled"
+                            ? "text-amber-700"
+                            : applicationStatus === "rejected"
+                              ? "text-red-700"
+                              : "text-purple-700"
+                      }`}
+                    >
+                      {applicationStatus === "accepted"
+                        ? "🎉 Congratulations! Your application has been accepted!"
+                        : applicationStatus === "interview_scheduled"
+                          ? "📅 Interview scheduled! Check your email for details."
+                          : applicationStatus === "rejected"
+                            ? "Application not selected at this time."
+                            : applicationStatus === "shortlisted"
+                              ? "⭐ You have been shortlisted!"
+                              : "Application is being reviewed"}
+                    </p>
+                  </div>
+                )}
               </div>
             ) : job.isActive ? (
               <button
                 onClick={() => setShowApplyModal(true)}
-                className="w-full py-3 sm:py-3.5 bg-gray-900 hover:bg-gray-800 text-white text-sm sm:text-base font-medium rounded-xl transition-all flex items-center justify-center gap-2">
+                className="w-full py-3 sm:py-3.5 bg-gray-900 hover:bg-gray-800 text-white text-sm sm:text-base font-medium rounded-xl transition-all flex items-center justify-center gap-2"
+              >
                 <Send className="w-4 h-4 sm:w-5 sm:h-5" />
                 Apply for this Job
               </button>
@@ -248,8 +303,12 @@ export default function CandidateJobDetailPage() {
           jobTitle={job.title}
           onClose={() => setShowApplyModal(false)}
           onSuccess={() => {
-            setShowApplyModal(false);
-            setApplied(true);
+            setShowSuccessAnimation(true);
+            setTimeout(() => {
+              setShowApplyModal(false);
+              setApplied(true);
+              setShowSuccessAnimation(false);
+            }, 2000);
           }}
         />
       )}
@@ -273,6 +332,7 @@ function ApplyModal({
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showSuccess, setShowSuccess] = useState(false);
 
   // Pre-fill from localStorage
   useEffect(() => {
@@ -328,14 +388,17 @@ function ApplyModal({
         body: formData,
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
+        const data = await res.json();
         throw new Error(data.message || "Failed to submit application");
       }
 
-      console.log("✅ Application submitted:", data);
-      onSuccess();
+      // Don't wait for full response parsing for better UX
+      console.log("✅ Application submitted successfully");
+      setShowSuccess(true);
+      setTimeout(() => {
+        onSuccess();
+      }, 1500);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -353,6 +416,24 @@ function ApplyModal({
 
       {/* Modal */}
       <div className="relative bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-lg max-h-[90vh] overflow-hidden">
+        {/* Success Animation Overlay */}
+        {showSuccess && (
+          <div className="absolute inset-0 bg-white z-50 flex flex-col items-center justify-center animate-in fade-in duration-300">
+            <div className="relative">
+              <div className="w-20 h-20 rounded-full bg-emerald-100 flex items-center justify-center animate-in zoom-in duration-500">
+                <CheckCircle className="w-12 h-12 text-emerald-600 animate-in zoom-in duration-700" />
+              </div>
+              <div className="absolute inset-0 rounded-full border-4 border-emerald-200 animate-ping" />
+            </div>
+            <h3 className="mt-6 text-xl font-bold text-gray-900 animate-in slide-in-from-bottom-4 duration-500">
+              Application Submitted!
+            </h3>
+            <p className="mt-2 text-sm text-gray-600 animate-in slide-in-from-bottom-4 duration-700">
+              We'll review your application soon
+            </p>
+          </div>
+        )}
+
         {/* Header */}
         <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100 bg-gray-50">
           <div className="flex items-center justify-between">
@@ -366,7 +447,8 @@ function ApplyModal({
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 sm:p-2 hover:bg-gray-200 rounded-lg transition-colors shrink-0">
+              className="p-1.5 sm:p-2 hover:bg-gray-200 rounded-lg transition-colors shrink-0"
+            >
               <X className="w-5 h-5 text-gray-500" />
             </button>
           </div>
@@ -375,7 +457,8 @@ function ApplyModal({
         {/* Form */}
         <form
           onSubmit={handleSubmit}
-          className="p-4 sm:p-6 space-y-3 sm:space-y-4 overflow-y-auto max-h-[calc(90vh-120px)]">
+          className="p-4 sm:p-6 space-y-3 sm:space-y-4 overflow-y-auto max-h-[calc(90vh-120px)]"
+        >
           {error && (
             <div className="p-3 bg-red-50 text-red-600 text-sm rounded-xl border border-red-100">
               {error}
@@ -421,7 +504,8 @@ function ApplyModal({
                 file
                   ? "border-emerald-300 bg-emerald-50"
                   : "border-gray-200 hover:border-gray-300"
-              }`}>
+              }`}
+            >
               <input
                 type="file"
                 accept=".pdf,.doc,.docx"
@@ -446,7 +530,8 @@ function ApplyModal({
                         e.stopPropagation();
                         setFile(null);
                       }}
-                      className="p-1 hover:bg-emerald-100 rounded">
+                      className="p-1 hover:bg-emerald-100 rounded"
+                    >
                       <X className="w-4 h-4 text-gray-500" />
                     </button>
                   </div>
@@ -470,15 +555,20 @@ function ApplyModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2.5 sm:py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm sm:text-base font-medium rounded-xl transition-all">
+              className="flex-1 py-2.5 sm:py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm sm:text-base font-medium rounded-xl transition-all"
+            >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading || !file}
-              className="flex-1 py-2.5 sm:py-3 bg-gray-900 hover:bg-gray-800 text-white text-sm sm:text-base font-medium rounded-xl transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+              className="flex-1 py-2.5 sm:py-3 bg-gray-900 hover:bg-gray-800 text-white text-sm sm:text-base font-medium rounded-xl transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
               {loading ? (
-                "Submitting..."
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Submitting...</span>
+                </>
               ) : (
                 <>
                   <Send className="w-4 h-4" />

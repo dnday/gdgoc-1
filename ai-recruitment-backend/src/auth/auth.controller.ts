@@ -41,20 +41,14 @@ export class AuthController {
   async googleAuthRedirect(@Req() req, @Res() res) {
     const result = req.user;
 
-    // Jika user baru dan belum ada role, redirect ke halaman pilih role
-    if (result.isNewUser && !result.user) {
-      const tempData = encodeURIComponent(JSON.stringify(result.tempUserData));
-      return res.redirect(`http://localhost:3001/select-role?data=${tempData}`);
-    }
-
-    // Jika user sudah ada atau baru dengan role, login
+    // Login user (baik existing maupun new user)
     const data = await this.authService.login(result.user);
     const user = result.user;
 
     // Build redirect URL with user info
     const params = new URLSearchParams({
       token: data.accessToken,
-      role: user.role || 'recruiter',
+      role: user.role || 'candidate',
       name: user.name || user.email?.split('@')[0] || 'User',
       email: user.email || '',
     });
@@ -64,13 +58,5 @@ export class AuthController {
     }
 
     res.redirect(`http://localhost:3001/login-success?${params.toString()}`);
-  }
-
-  // --- ENDPOINT COMPLETE GOOGLE REGISTRATION ---
-  @Post('google/complete')
-  async completeGoogleRegistration(@Body() body: any) {
-    // Create user with role after role selection
-    const newUser = await this.authService.createGoogleUser(body);
-    return this.authService.login(newUser);
   }
 }

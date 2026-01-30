@@ -10,6 +10,9 @@ export default function LoginForm() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetMessage, setResetMessage] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,6 +32,14 @@ export default function LoginForm() {
         throw new Error(data.message || "Terjadi kesalahan.");
       }
 
+      // Clear old user data first
+      if (typeof window !== "undefined") {
+        localStorage.clear();
+      }
+      Object.keys(Cookies.get()).forEach((cookieName) => {
+        Cookies.remove(cookieName);
+      });
+
       // Set cookie with proper settings
       Cookies.set("token", data.accessToken, {
         expires: 1,
@@ -36,7 +47,7 @@ export default function LoginForm() {
         sameSite: "lax",
       });
 
-      // Also save to localStorage as fallback
+      // Save new user data to localStorage
       if (typeof window !== "undefined") {
         localStorage.setItem("token", data.accessToken);
         localStorage.setItem("userRole", data.user?.role || "recruiter");
@@ -81,9 +92,7 @@ export default function LoginForm() {
         </div>
       )}
 
-      <form
-        onSubmit={handleSubmit}
-        className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-5">
         <div className="space-y-1.5">
           <label className="text-sm font-bold text-gray-700">
             Email Address
@@ -122,7 +131,9 @@ export default function LoginForm() {
         <div className="flex justify-end">
           <button
             type="button"
-            className="text-sm font-bold text-blue-600 hover:text-blue-700">
+            onClick={() => setShowForgotPassword(true)}
+            className="text-sm font-bold text-blue-600 hover:text-blue-700"
+          >
             Forgot password?
           </button>
         </div>
@@ -130,7 +141,8 @@ export default function LoginForm() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-3.5 bg-gray-900 hover:bg-gray-800 text-white font-bold rounded-xl shadow-lg shadow-gray-900/20 transition-all transform hover:-translate-y-0.5 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+          className="w-full py-3.5 bg-gray-900 hover:bg-gray-800 text-white font-bold rounded-xl shadow-lg shadow-gray-900/20 transition-all transform hover:-translate-y-0.5 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        >
           {loading ? (
             <span>Loading...</span>
           ) : (
@@ -159,10 +171,9 @@ export default function LoginForm() {
           onClick={() => {
             window.location.href = "http://localhost:3000/auth/google";
           }}
-          className="w-full py-3 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-xl border border-gray-200 transition-all flex items-center justify-center gap-3">
-          <svg
-            className="w-5 h-5"
-            viewBox="0 0 24 24">
+          className="w-full py-3 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-xl border border-gray-200 transition-all flex items-center justify-center gap-3"
+        >
+          <svg className="w-5 h-5" viewBox="0 0 24 24">
             <path
               fill="#4285F4"
               d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -186,13 +197,70 @@ export default function LoginForm() {
         {/* Info: Register link */}
         <p className="text-center text-sm text-gray-500 mt-4">
           Don't have an account?{" "}
-          <a
-            href="/register"
-            className="text-blue-600 font-bold hover:text-blue-700">
+          <button
+            type="button"
+            onClick={() => (window.location.href = "/?tab=register")}
+            className="text-blue-600 font-bold hover:text-blue-700"
+          >
             Register here
-          </a>
+          </button>
         </p>
       </form>
+
+      {/* Forgot Password Modal */}
+      {showForgotPassword && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-2">
+              Reset Password
+            </h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Contact admin to reset your password. Email:{" "}
+              <a
+                href="mailto:admin@airecruitment.com"
+                className="text-blue-600 hover:underline"
+              >
+                admin@airecruitment.com
+              </a>
+            </p>
+            <div className="space-y-3">
+              <input
+                type="email"
+                value={resetEmail}
+                onChange={(e) => setResetEmail(e.target.value)}
+                placeholder="Your email"
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-900/10"
+              />
+              <button
+                onClick={() => {
+                  setResetMessage(
+                    "Password reset request sent! Please contact admin@airecruitment.com with your email: " +
+                      resetEmail,
+                  );
+                  setTimeout(() => {
+                    setShowForgotPassword(false);
+                    setResetMessage("");
+                    setResetEmail("");
+                  }, 3000);
+                }}
+                disabled={!resetEmail}
+                className="w-full py-3 bg-gray-900 hover:bg-gray-800 text-white font-bold rounded-xl transition-all disabled:opacity-50"
+              >
+                Request Reset
+              </button>
+              {resetMessage && (
+                <p className="text-sm text-green-600">{resetMessage}</p>
+              )}
+              <button
+                onClick={() => setShowForgotPassword(false)}
+                className="w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl transition-all"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

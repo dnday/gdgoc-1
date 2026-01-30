@@ -1,13 +1,12 @@
 "use client";
 
 import Cookies from "js-cookie";
-import { ArrowRight, Briefcase, Lock, Mail, User } from "lucide-react";
+import { ArrowRight, Lock, Mail } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 export default function RegisterForm() {
   const router = useRouter();
-  const [role, setRole] = useState<"candidate" | "recruiter">("recruiter");
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -18,12 +17,10 @@ export default function RegisterForm() {
     setError("");
 
     try {
-      const payload = { ...form, role };
-
       const res = await fetch("http://localhost:3000/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(form),
       });
 
       const data = await res.json();
@@ -32,22 +29,29 @@ export default function RegisterForm() {
         throw new Error(data.message || "Terjadi kesalahan.");
       }
 
+      // Clear old user data first
+      if (typeof window !== "undefined") {
+        localStorage.clear();
+      }
+      Object.keys(Cookies.get()).forEach((cookieName) => {
+        Cookies.remove(cookieName);
+      });
+
+      // Set new token
       Cookies.set("token", data.accessToken, { expires: 1 });
 
-      // Also save to localStorage as fallback
+      // Save to localStorage
       if (typeof window !== "undefined") {
         localStorage.setItem("token", data.accessToken);
-        localStorage.setItem("userRole", role);
+        localStorage.setItem("userRole", "candidate");
+        localStorage.setItem("userName", data.user.name || form.name);
+        localStorage.setItem("userEmail", data.user.email || form.email);
       }
 
-      console.log("✅ Register success! Role:", role);
+      console.log("✅ Register success! Role: candidate");
 
-      // Redirect berdasarkan role yang dipilih
-      const redirectPath =
-        role === "candidate" ? "/dashboard/candidate" : "/dashboard";
-      
-      // Use window.location for more reliable redirect
-      window.location.href = redirectPath;
+      // Redirect to candidate dashboard
+      window.location.href = "/dashboard/candidate";
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -57,43 +61,6 @@ export default function RegisterForm() {
 
   return (
     <div>
-      {/* ROLE SELECTION */}
-      <div className="grid grid-cols-2 gap-4 mb-6">
-        <button
-          type="button"
-          onClick={() => setRole("candidate")}
-          className={`p-4 rounded-xl border-2 text-left transition-all duration-200 ${
-            role === "candidate"
-              ? "border-blue-600 bg-blue-50/50"
-              : "border-gray-100 hover:border-gray-200"
-          }`}>
-          <div
-            className={`mb-3 ${role === "candidate" ? "text-blue-600" : "text-gray-400"}`}>
-            <User className="w-6 h-6" />
-          </div>
-          <div className="font-bold text-gray-900 text-sm">Candidate</div>
-          <div className="text-xs text-gray-500 mt-1">
-            I'm looking for a job
-          </div>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setRole("recruiter")}
-          className={`p-4 rounded-xl border-2 text-left transition-all duration-200 ${
-            role === "recruiter"
-              ? "border-blue-600 bg-blue-50/50"
-              : "border-gray-100 hover:border-gray-200"
-          }`}>
-          <div
-            className={`mb-3 ${role === "recruiter" ? "text-blue-600" : "text-gray-400"}`}>
-            <Briefcase className="w-6 h-6" />
-          </div>
-          <div className="font-bold text-gray-900 text-sm">Recruiter</div>
-          <div className="text-xs text-gray-500 mt-1">I'm hiring talent</div>
-        </button>
-      </div>
-
       {/* ERROR ALERT */}
       {error && (
         <div className="mb-6 p-4 bg-red-50 text-red-600 text-sm rounded-xl border border-red-100 flex items-center gap-2">
@@ -102,9 +69,7 @@ export default function RegisterForm() {
       )}
 
       {/* FORM */}
-      <form
-        onSubmit={handleSubmit}
-        className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-5">
         <div className="space-y-1.5">
           <label className="text-sm font-bold text-gray-700">Full Name</label>
           <input
@@ -154,7 +119,8 @@ export default function RegisterForm() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-3.5 bg-gray-900 hover:bg-gray-800 text-white font-bold rounded-xl shadow-lg shadow-gray-900/20 transition-all transform hover:-translate-y-0.5 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+          className="w-full py-3.5 bg-gray-900 hover:bg-gray-800 text-white font-bold rounded-xl shadow-lg shadow-gray-900/20 transition-all transform hover:-translate-y-0.5 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        >
           {loading ? (
             <span>Loading...</span>
           ) : (
@@ -164,6 +130,17 @@ export default function RegisterForm() {
             </>
           )}
         </button>
+
+        {/* Want to be a recruiter link */}
+        <div className="text-center">
+          <button
+            type="button"
+            onClick={() => (window.location.href = "/become-recruiter")}
+            className="text-sm text-blue-600 hover:text-blue-700 font-medium hover:underline"
+          >
+            Want to be a recruiter? Apply here
+          </button>
+        </div>
 
         {/* Divider */}
         <div className="relative my-6">
@@ -181,14 +158,11 @@ export default function RegisterForm() {
         <button
           type="button"
           onClick={() => {
-            // Pass role via OAuth state parameter
-            const state = encodeURIComponent(JSON.stringify({ role }));
-            window.location.href = `http://localhost:3000/auth/google?state=${state}`;
+            window.location.href = `http://localhost:3000/auth/google`;
           }}
-          className="w-full py-3 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-xl border border-gray-200 transition-all flex items-center justify-center gap-3">
-          <svg
-            className="w-5 h-5"
-            viewBox="0 0 24 24">
+          className="w-full py-3 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-xl border border-gray-200 transition-all flex items-center justify-center gap-3"
+        >
+          <svg className="w-5 h-5" viewBox="0 0 24 24">
             <path
               fill="#4285F4"
               d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"

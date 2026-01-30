@@ -17,6 +17,14 @@ function LoginSuccessContent() {
     const pictureFromUrl = searchParams.get("picture");
 
     if (token) {
+      // Clear old user data first
+      if (typeof window !== "undefined") {
+        localStorage.clear();
+      }
+      Object.keys(Cookies.get()).forEach((cookieName) => {
+        Cookies.remove(cookieName);
+      });
+
       // Simpan token ke Cookie (berlaku 1 hari)
       Cookies.set("token", token, {
         expires: 1,
@@ -84,7 +92,8 @@ export default function LoginSuccess() {
         <div className="flex h-screen items-center justify-center bg-gray-50">
           <div className="w-12 h-12 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin"></div>
         </div>
-      }>
+      }
+    >
       <LoginSuccessContent />
     </Suspense>
   );

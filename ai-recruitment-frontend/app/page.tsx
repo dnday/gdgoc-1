@@ -1,12 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import AuthHeader from "../components/AuthHeader";
 import LoginForm from "../components/LoginForm";
 import RegisterForm from "../components/RegisterForm";
 
 export default function Home() {
+  const searchParams = useSearchParams();
   const [isRegister, setIsRegister] = useState(false);
+
+  useEffect(() => {
+    const tab = searchParams?.get("tab");
+    if (tab === "register") {
+      setIsRegister(true);
+    }
+  }, [searchParams]);
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center bg-gray-50 text-gray-900 font-sans p-4">
@@ -22,7 +31,8 @@ export default function Home() {
               !isRegister
                 ? "bg-white text-gray-900 shadow-sm ring-1 ring-black/5"
                 : "text-gray-500 hover:text-gray-700"
-            }`}>
+            }`}
+          >
             Log In
           </button>
           <button
@@ -31,7 +41,8 @@ export default function Home() {
               isRegister
                 ? "bg-white text-gray-900 shadow-sm ring-1 ring-black/5"
                 : "text-gray-500 hover:text-gray-700"
-            }`}>
+            }`}
+          >
             Create Account
           </button>
         </div>
@@ -41,15 +52,11 @@ export default function Home() {
 
           <p className="mt-8 text-center text-xs text-gray-500 leading-relaxed px-4">
             By clicking continue, you agree to our{" "}
-            <a
-              href="#"
-              className="underline text-gray-700 font-medium">
+            <a href="#" className="underline text-gray-700 font-medium">
               Terms of Service
             </a>{" "}
             and{" "}
-            <a
-              href="#"
-              className="underline text-gray-700 font-medium">
+            <a href="#" className="underline text-gray-700 font-medium">
               Privacy Policy
             </a>
           </p>

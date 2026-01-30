@@ -1,17 +1,10 @@
 "use client";
 
+import AccountDropdown from "@/components/AccountDropdown";
 import Cookies from "js-cookie";
-import {
-  Briefcase,
-  Clock,
-  MapPin,
-  Search,
-  CheckCircle2,
-  Check,
-} from "lucide-react";
+import { Briefcase, Check, CheckCircle2, Clock, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import AccountDropdown from "@/components/AccountDropdown";
 
 // API Job type from backend
 interface ApiJob {
@@ -159,10 +152,7 @@ export default function CandidateDashboard() {
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2 mb-2">
               <div className="bg-gray-900 text-white p-2 rounded-lg shadow-sm">
-                <Check
-                  className="w-5 h-5"
-                  strokeWidth={3}
-                />
+                <Check className="w-5 h-5" strokeWidth={3} />
               </div>
               <span className="text-xl font-extrabold text-gray-900 tracking-tight">
                 RecruitPro
@@ -193,6 +183,28 @@ export default function CandidateDashboard() {
           </div>
         </div>
 
+        {/* Recruiter Access Banner */}
+        <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl border border-blue-100">
+          <div className="flex items-start gap-3">
+            <div className="bg-blue-100 rounded-full p-2 flex-shrink-0">
+              <Briefcase className="w-5 h-5 text-blue-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-bold text-gray-900 mb-1">Are you hiring?</h3>
+              <p className="text-sm text-gray-600 mb-3">
+                Request recruiter access to post jobs and find the best
+                candidates for your company.
+              </p>
+              <button
+                onClick={() => router.push("/become-recruiter")}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-all"
+              >
+                Apply for Recruiter Access
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* Job List */}
         <div className="space-y-3 sm:space-y-4">
           {filteredJobs.length === 0 ? (
@@ -210,7 +222,8 @@ export default function CandidateDashboard() {
                 onClick={() =>
                   router.push(`/dashboard/candidate/jobs/${job.id}`)
                 }
-                className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-6 hover:shadow-lg hover:shadow-gray-100/50 transition-all cursor-pointer">
+                className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-6 hover:shadow-lg hover:shadow-gray-100/50 transition-all cursor-pointer"
+              >
                 <div className="flex items-start gap-3 sm:gap-4">
                   {/* Icon - hidden on mobile */}
                   <div className="hidden sm:flex w-12 h-12 bg-blue-50 rounded-xl items-center justify-center flex-shrink-0">
@@ -258,7 +271,8 @@ export default function CandidateDashboard() {
                       {job.skills.slice(0, 3).map((skill, index) => (
                         <span
                           key={index}
-                          className="px-2 sm:px-3 py-0.5 sm:py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
+                          className="px-2 sm:px-3 py-0.5 sm:py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full"
+                        >
                           {skill}
                         </span>
                       ))}

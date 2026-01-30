@@ -1,7 +1,4 @@
-import {
-  BadRequestException,
-  Injectable
-} from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma.service';
@@ -42,13 +39,13 @@ export class AuthService {
     // Hash Password (Encrypt)
     const hashedPassword = await bcrypt.hash(body.password, 10);
 
-    // Simpan User Baru dengan role
+    // Simpan User Baru dengan role (default: candidate)
     const newUser = await this.prisma.user.create({
       data: {
         email: body.email,
         name: body.name,
         password: hashedPassword,
-        role: body.role || 'recruiter', // Default ke recruiter jika tidak ada
+        role: 'candidate', // Always default to candidate
       },
     });
 
@@ -77,44 +74,19 @@ export class AuthService {
     const user = await this.prisma.user.findFirst({
       where: { email: details.email },
     });
-    
+
     // Jika user sudah ada, return user (existing user - login)
     if (user) return { user, isNewUser: false };
 
-    // Jika user baru dan role sudah ada (dari state parameter), create user
-    if (details.role) {
-      const newUser = await this.prisma.user.create({
-        data: {
-          email: details.email,
-          name: details.name,
-          picture: details.picture,
-          role: details.role,
-        },
-      });
-      return { user: newUser, isNewUser: false };
-    }
-
-    // Jika user baru tapi belum ada role, return data untuk role selection
-    return { 
-      user: null, 
-      isNewUser: true,
-      tempUserData: {
+    // Jika user baru, create sebagai candidate (default)
+    const newUser = await this.prisma.user.create({
+      data: {
         email: details.email,
         name: details.name,
         picture: details.picture,
-      }
-    };
-  }
-
-  // --- 5. CREATE GOOGLE USER AFTER ROLE SELECTION ---
-  async createGoogleUser(data: any) {
-    return await this.prisma.user.create({
-      data: {
-        email: data.email,
-        name: data.name,
-        picture: data.picture,
-        role: data.role,
+        role: 'candidate', // Always default to candidate
       },
     });
+    return { user: newUser, isNewUser: true };
   }
 }

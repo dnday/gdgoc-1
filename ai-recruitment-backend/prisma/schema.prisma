@@ -14,17 +14,40 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  name      String?  // <--- DITAMBAHKAN: Untuk menyimpan Nama User
-  password  String?  // (Nullable) Kosong jika login via Google
-  picture   String?  // <--- DITAMBAHKAN: Untuk menyimpan Foto Profil Google
-  role      String   @default("recruiter") // <--- Role user (recruiter/candidate)
+  id             String            @id @default(uuid())
+  email          String            @unique
+  name           String?
+  password       String?           // (Nullable) Kosong jika login via Google
+  picture        String?
+  role           String            @default("candidate") // Default: candidate
+  accountStatus  String            @default("active")    // active, pending, suspended
   
-  jobs      Job[]
+  jobs           Job[]
+  recruiterRequest RecruiterRequest?
   
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt // <--- DITAMBAHKAN: Otomatis update jam saat diedit
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+}
+
+model RecruiterRequest {
+  id              String    @id @default(uuid())
+  userId          String    @unique
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  companyName     String
+  companyWebsite  String?
+  companyEmail    String
+  position        String
+  reason          String    @db.Text
+  
+  status          String    @default("pending") // pending, approved, rejected
+  submittedAt     DateTime  @default(now())
+  reviewedAt      DateTime?
+  reviewedBy      String?   // Admin user ID
+  reviewNotes     String?   @db.Text
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }
 
 model Job {
@@ -32,6 +55,8 @@ model Job {
   title        String
   description  String
   requirements String        @db.Text
+  company      String?
+  location     String?
   
   recruiterId  String
   recruiter    User          @relation(fields: [recruiterId], references: [id])
@@ -48,6 +73,7 @@ model Application {
   jobId            String
   job              Job      @relation(fields: [jobId], references: [id])
   
+  userId           String?
   candidateName    String
   email            String
   resumeUrl        String

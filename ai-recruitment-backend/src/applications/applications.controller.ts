@@ -4,9 +4,9 @@ import {
   Get,
   Param,
   Post,
+  Query,
   UploadedFile,
   UseInterceptors,
-  Query,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApplicationsService } from './applications.service';
@@ -46,6 +46,21 @@ export class ApplicationsController {
   @Get('candidate/applied')
   async getAppliedJobs(@Query('email') email: string) {
     return this.appService.getAppliedJobIds(email);
+  }
+
+  // 2.7 Get Applications by User ID
+  @Get('user/:userId')
+  async getApplicationsByUser(@Param('userId') userId: string) {
+    return this.appService.findByUser(userId);
+  }
+
+  // 2.8 Get Application Status for a Job
+  @Get('status/:jobId/:email')
+  async getApplicationStatus(
+    @Param('jobId') jobId: string,
+    @Param('email') email: string,
+  ) {
+    return this.appService.getApplicationStatus(jobId, email);
   }
 
   // 3. Generate Draft Email (Preview)
