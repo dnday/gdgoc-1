@@ -111,19 +111,6 @@ The AI Recruitment Platform is a full-stack web application that leverages artif
 
 ---
 
-## 👥 Team Members & Roles
-
-| Name     | Role   | Responsibilities                    |
-| -------- | ------ | ----------------------------------- |
-| [Name 1] | [Role] | [Frontend/Backend/AI/Database/etc.] |
-| [Name 2] | [Role] | [Responsibilities]                  |
-| [Name 3] | [Role] | [Responsibilities]                  |
-| [Name 4] | [Role] | [Responsibilities]                  |
-
-_Note: Please fill in team member details above_
-
----
-
 ## 🚀 Getting Started
 
 ### Prerequisites
