@@ -6,7 +6,8 @@
  */
 
 // Remove trailing slash if exists to prevent double slashes in URLs
-const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+// Also handle empty string case
+const baseUrl = process.env.NEXT_PUBLIC_API_URL?.trim() || "http://localhost:3000";
 export const API_URL = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
 
 /**
