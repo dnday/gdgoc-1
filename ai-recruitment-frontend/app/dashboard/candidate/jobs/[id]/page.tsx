@@ -130,7 +130,7 @@ export default function CandidateJobDetailPage() {
 
     try {
       const res = await fetch(
-        `http://localhost:3000/applications/status/${jobId}/${encodeURIComponent(email)}`,
+        `${API_URL}/applications/status/${jobId}/${encodeURIComponent(email)}`,
       );
       if (res.ok) {
         const data = await res.json();

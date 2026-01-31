@@ -1987,7 +1987,7 @@ export default function JobDetailPage() {
 
                     // Send Email & Update Status
                     const res = await fetch(
-                      "http://localhost:3000/applications/send-email",
+                      `${API_URL}/applications/send-email`,
                       {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
@@ -2346,7 +2346,7 @@ export default function JobDetailPage() {
 
                     // Send Email & Update Status to interview_scheduled
                     const res = await fetch(
-                      "http://localhost:3000/applications/send-email",
+                      `${API_URL}/applications/send-email`,
                       {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
