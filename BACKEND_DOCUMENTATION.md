@@ -15,7 +15,6 @@
 7. [Data Flow](#7-data-flow)
 8. [Implementation Details](#8-implementation-details)
 9. [Deployment Architecture](#9-deployment-architecture)
-10. [Video Explanation Guide](#10-video-explanation-guide)
 
 ---
 
@@ -1706,156 +1705,14 @@ healthCheck() {
 
 ---
 
-## 10. Video Explanation Guide
-
-### 10.1 Video Structure (5 Minutes)
-
-**Minute 0:00-0:30 - Introduction**
-
-- "Hi, I'm [Name] presenting the AI Recruitment Platform"
-- "This is an intelligent hiring system powered by Google Gemini AI"
-- Show: Live demo homepage
-
-**Minute 0:30-1:30 - System Architecture**
-
-- Show: Architecture diagram
-- Explain: "NestJS backend on Railway, Next.js frontend on Vercel"
-- Mention: "PostgreSQL database, Prisma ORM, Supabase storage"
-- Highlight: "Microservices-ready, scalable architecture"
-
-**Minute 1:30-2:30 - API Design**
-
-- Show: API documentation page (`/`)
-- Explain: "RESTful API with JWT authentication"
-- Demo: "Key endpoints - auth, jobs, applications"
-- Show: Postman/Thunder Client making API call
-
-**Minute 2:30-3:30 - AI Integration (Most Important)**
-
-- Show: Application submission flow
-- Explain: "When candidate uploads resume..."
-  1. "PDF uploaded to Supabase"
-  2. "Text extracted with pdf-parse"
-  3. "Sent to Google Gemini 2.5 Flash"
-  4. "AI extracts skills, generates summary"
-  5. "Calculates match score 0-100"
-- Show: Actual AI analysis result in dashboard
-- Demo: AI-generated email
-
-**Minute 3:30-4:30 - Live Demo**
-
-- Candidate flow: Apply to job → See match score
-- Recruiter flow: View applications sorted by AI score
-- Show: Multi-candidate comparison with AI insights
-- Demonstrate: AI email generation
-
-**Minute 4:30-5:00 - Conclusion**
-
-- Recap: "AI-powered matching, automated emails, smart hiring"
-- Show: GitHub repo, deployment links
-- "Thank you for watching"
-
-### 10.2 Key Points to Emphasize
-
-**Architecture Strengths**
-✅ Modular, scalable design
-✅ Separation of concerns (MVC pattern)
-✅ Production-ready deployment
-✅ Comprehensive error handling
-
-**API Design Excellence**
-✅ RESTful conventions
-✅ Proper HTTP methods and status codes
-✅ JWT + OAuth authentication
-✅ Role-based access control
-✅ Input validation with DTOs
-
-**AI Integration Highlights**
-✅ Google Gemini 2.5 Flash (latest model)
-✅ Intelligent resume parsing
-✅ Context-aware matching algorithm
-✅ Professional email generation
-✅ Multi-candidate comparison
-
-### 10.3 Demo Script
-
-**Show These Features:**
-
-1. **Authentication**
-   - "Users can sign up with email or Google OAuth"
-   - Login demo with JWT token
-
-2. **Candidate Journey**
-   - Browse jobs
-   - Upload resume (show file upload)
-   - **AI Analysis Result** - most important!
-   - View match score and explanation
-
-3. **Recruiter Dashboard**
-   - View applications sorted by AI score
-   - Show detailed AI analysis
-   - Compare 3 candidates side-by-side
-   - Generate AI email (show before/after)
-
-4. **Admin Features**
-   - Approve recruiter requests
-   - Workflow demonstration
-
----
-
-## 📋 Submission Checklist
-
-### For PDF Documentation
-
-✅ System architecture diagram included
-✅ Database ERD clear and labeled
-✅ Complete API endpoint list
-✅ AI integration flow diagram
-✅ Data flow explanations
-✅ Code snippets for key features
-✅ Deployment architecture
-✅ Technology stack detailed
-
-### For Video
-
-✅ Audio clear and professional
-✅ Screen recording high quality (1080p)
-✅ Architecture diagram shown
-✅ Live demo functional
-✅ AI features highlighted
-✅ API endpoints demonstrated
-✅ Under 5 minutes
-✅ Conclusion with links
-
-### GitHub Repository
-
-✅ Clean commit history
-✅ README.md with deployment links
-✅ API documentation accessible
-✅ Environment variables documented
-✅ Proper .gitignore
-
----
-
-## 🔗 Quick Reference Links
+## 🔗 Project Links
 
 - **GitHub Repository**: https://github.com/dnday/gdgoc-1
-- **Live Demo (Frontend)**: https://your-frontend.vercel.app
-- **API Documentation**: https://gdgoc-1-production.up.railway.app/
-- **Health Check**: https://gdgoc-1-production.up.railway.app/health
-
----
-
-## 📞 Contact & Support
-
-For questions or clarifications about this documentation:
-
-- Email: your-email@example.com
-- GitHub Issues: https://github.com/dnday/gdgoc-1/issues
+- **Backend API**: https://gdgoc-1-production.up.railway.app/
+- **API Health Check**: https://gdgoc-1-production.up.railway.app/health
 
 ---
 
 **Document Version**: 1.0  
 **Last Updated**: January 31, 2026  
-**Author**: Backend Development Team  
-**License**: MIT
+**Author**: Backend Development Team
