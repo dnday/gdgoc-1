@@ -2,7 +2,15 @@
 
 import AccountDropdown from "@/components/AccountDropdown";
 import Cookies from "js-cookie";
-import { Briefcase, Check, CheckCircle2, Clock, Search } from "lucide-react";
+import {
+  Briefcase,
+  Check,
+  CheckCircle2,
+  Clock,
+  DollarSign,
+  MapPin,
+  Search,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
@@ -12,6 +20,10 @@ interface ApiJob {
   title: string;
   description: string;
   requirements: string;
+  location?: string;
+  jobType?: string;
+  salaryMin?: number;
+  salaryMax?: number;
   isActive: boolean;
   createdAt: string;
   recruiter?: {
@@ -25,6 +37,10 @@ interface Job {
   id: string;
   title: string;
   company: string;
+  location: string;
+  jobType: string;
+  salaryMin?: number;
+  salaryMax?: number;
   description: string;
   postedAgo: string;
   skills: string[];
@@ -63,6 +79,12 @@ export default function CandidateDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [jobs, setJobs] = useState<Job[]>([]);
 
+  // Filter states
+  const [selectedJobType, setSelectedJobType] = useState<string>("all");
+  const [selectedLocation, setSelectedLocation] = useState<string>("all");
+  const [minSalary, setMinSalary] = useState<string>("");
+  const [maxSalary, setMaxSalary] = useState<string>("");
+
   // Fetch jobs from API
   const fetchJobs = useCallback(async () => {
     try {
@@ -92,6 +114,10 @@ export default function CandidateDashboard() {
         id: job.id,
         title: job.title,
         company: job.recruiter?.name || "Company",
+        location: job.location || "Not specified",
+        jobType: job.jobType || "Onsite",
+        salaryMin: job.salaryMin,
+        salaryMax: job.salaryMax,
         description: job.description,
         postedAgo: getPostedAgo(job.createdAt),
         skills: parseSkills(job.requirements),
@@ -126,14 +152,40 @@ export default function CandidateDashboard() {
     setLoading(false);
   }, [router, fetchJobs]);
 
-  const filteredJobs = jobs.filter(
-    (job) =>
+  const filteredJobs = jobs.filter((job) => {
+    // Text search
+    const matchesSearch =
       job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       job.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
       job.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
       job.skills.some((skill) =>
         skill.toLowerCase().includes(searchQuery.toLowerCase()),
-      ),
+      );
+
+    // Job Type filter
+    const matchesJobType =
+      selectedJobType === "all" || job.jobType === selectedJobType;
+
+    // Location filter
+    const matchesLocation =
+      selectedLocation === "all" ||
+      job.location.toLowerCase().includes(selectedLocation.toLowerCase());
+
+    // Salary filter
+    let matchesSalary = true;
+    if (minSalary && job.salaryMax) {
+      matchesSalary = matchesSalary && job.salaryMax >= parseInt(minSalary);
+    }
+    if (maxSalary && job.salaryMin) {
+      matchesSalary = matchesSalary && job.salaryMin <= parseInt(maxSalary);
+    }
+
+    return matchesSearch && matchesJobType && matchesLocation && matchesSalary;
+  });
+
+  // Get unique locations for filter
+  const locations = Array.from(new Set(jobs.map((job) => job.location))).filter(
+    (loc) => loc && loc !== "Not specified",
   );
 
   if (loading) {
@@ -181,6 +233,94 @@ export default function CandidateDashboard() {
               className="w-full pl-10 pr-4 py-2.5 bg-transparent text-gray-900 placeholder-gray-400 focus:outline-none text-sm sm:text-base"
             />
           </div>
+        </div>
+
+        {/* Filters */}
+        <div className="mb-6 p-4 bg-white rounded-2xl border border-gray-100">
+          <h3 className="text-sm font-semibold text-gray-700 mb-3">Filters</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Job Type Filter */}
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-2">
+                Job Type
+              </label>
+              <select
+                value={selectedJobType}
+                onChange={(e) => setSelectedJobType(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="all">All Types</option>
+                <option value="Remote">Remote</option>
+                <option value="Hybrid">Hybrid</option>
+                <option value="Onsite">Onsite</option>
+              </select>
+            </div>
+
+            {/* Location Filter */}
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-2">
+                Location
+              </label>
+              <select
+                value={selectedLocation}
+                onChange={(e) => setSelectedLocation(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="all">All Locations</option>
+                {locations.map((location) => (
+                  <option key={location} value={location}>
+                    {location}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Min Salary Filter */}
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-2">
+                Min Salary (IDR)
+              </label>
+              <input
+                type="number"
+                placeholder="e.g. 5000000"
+                value={minSalary}
+                onChange={(e) => setMinSalary(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            {/* Max Salary Filter */}
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-2">
+                Max Salary (IDR)
+              </label>
+              <input
+                type="number"
+                placeholder="e.g. 15000000"
+                value={maxSalary}
+                onChange={(e) => setMaxSalary(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
+          {/* Clear Filters Button */}
+          {(selectedJobType !== "all" ||
+            selectedLocation !== "all" ||
+            minSalary ||
+            maxSalary) && (
+            <button
+              onClick={() => {
+                setSelectedJobType("all");
+                setSelectedLocation("all");
+                setMinSalary("");
+                setMaxSalary("");
+              }}
+              className="mt-3 text-sm text-blue-600 hover:text-blue-700 font-medium"
+            >
+              Clear all filters
+            </button>
+          )}
         </div>
 
         {/* Recruiter Access Banner */}
@@ -248,9 +388,33 @@ export default function CandidateDashboard() {
                           </span>
                         )}
                         <span className="px-2 sm:px-3 py-1 sm:py-1.5 bg-blue-50 text-blue-600 text-xs sm:text-sm font-medium rounded-full">
-                          {job.type}
+                          {job.jobType}
                         </span>
                       </div>
+                    </div>
+
+                    {/* Job Info: Location & Salary */}
+                    <div className="flex flex-wrap items-center gap-3 mt-2 text-xs sm:text-sm text-gray-600">
+                      {job.location && (
+                        <div className="flex items-center gap-1">
+                          <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                          {job.location}
+                        </div>
+                      )}
+                      {job.salaryMin && job.salaryMax && (
+                        <div className="flex items-center gap-1">
+                          <DollarSign className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                          {new Intl.NumberFormat("id-ID", {
+                            notation: "compact",
+                            compactDisplay: "short",
+                          }).format(job.salaryMin)}{" "}
+                          -{" "}
+                          {new Intl.NumberFormat("id-ID", {
+                            notation: "compact",
+                            compactDisplay: "short",
+                          }).format(job.salaryMax)}
+                        </div>
+                      )}
                     </div>
 
                     {/* Description preview - hidden on mobile */}

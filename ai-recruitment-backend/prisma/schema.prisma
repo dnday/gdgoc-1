@@ -57,6 +57,9 @@ model Job {
   requirements String        @db.Text
   company      String?
   location     String?
+  jobType      String        @default("Onsite") // Remote, Hybrid, Onsite
+  salaryMin    Int?
+  salaryMax    Int?
   
   recruiterId  String
   recruiter    User          @relation(fields: [recruiterId], references: [id])
@@ -86,5 +89,8 @@ model Application {
   matchExplanation String?  @db.Text
   
   status           String   @default("applied")
+  statusHistory    String[] @default([])
+  
   createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
