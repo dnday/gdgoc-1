@@ -2,6 +2,7 @@
 
 import {
   ArrowLeft,
+  ArrowRightLeft,
   ArrowUpDown,
   Briefcase,
   Calendar,
@@ -10,6 +11,7 @@ import {
   Clock,
   Download,
   Edit3,
+  FileText,
   Filter,
   Loader2,
   Mail,
@@ -46,6 +48,8 @@ interface ApiJob {
   isActive: boolean;
   createdAt: string;
   recruiter?: { name?: string; email?: string };
+  company?: string;
+  location?: string;
   applications: Application[];
   _count: { applications: number };
 }
@@ -91,8 +95,7 @@ const StatusBadge = ({ status }: { status: string }) => {
     <span
       className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ring-1 ring-inset ${
         styles[status] || styles.applied
-      }`}
-    >
+      }`}>
       {displayStatus}
     </span>
   );
@@ -114,10 +117,272 @@ const MatchScore = ({ score }: { score: number }) => {
 
   return (
     <div className="flex items-center gap-2">
-      <div className="flex-1 w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-        <div className={`h-full ${barColor}`} style={{ width: `${score}%` }} />
-      </div>
       <span className={`text-xs font-bold ${color}`}>{score}%</span>
+    </div>
+  );
+};
+
+const ComparisonModal = ({
+  isOpen,
+  onClose,
+  candidate1,
+  candidate2,
+  candidates,
+  onSelectCandidate2,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  candidate1: Application;
+  candidate2: Application | null;
+  candidates: Application[];
+  onSelectCandidate2: (app: Application) => void;
+}) => {
+  if (!isOpen) return null;
+
+  // Filter out candidate1 from the list
+  const availableCandidates = candidates.filter((c) => c.id !== candidate1.id);
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50 flex-shrink-0">
+          <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+            <ArrowRightLeft className="w-5 h-5 text-indigo-600" />
+            Compare Candidates
+          </h2>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto md:overflow-hidden bg-gray-50/30">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:h-full p-4 sm:p-6">
+            {/* Candidate 1 (Baselines) */}
+            <div className="bg-white rounded-xl border-2 border-indigo-100 shadow-sm overflow-hidden flex flex-col md:h-full h-auto">
+              <div className="bg-indigo-50/50 p-4 border-b border-indigo-100 flex-shrink-0">
+                <span className="text-xs font-bold text-indigo-600 uppercase tracking-wider bg-white px-2 py-0.5 rounded-md border border-indigo-100 inline-block mb-2">
+                  Baseline
+                </span>
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-white border border-indigo-100 flex-shrink-0 flex items-center justify-center font-bold text-indigo-700 text-lg shadow-sm">
+                    {candidate1.candidateName.charAt(0)}
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-lg">
+                      {candidate1.candidateName}
+                    </h3>
+                    <p className="text-sm text-slate-500">{candidate1.email}</p>
+                  </div>
+                  <div className="ml-auto">
+                    <StatusBadge status={candidate1.status} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-5 space-y-6 md:flex-1 md:overflow-y-auto overflow-visible">
+                {/* Match Score */}
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-purple-500" /> AI Match
+                    Score
+                  </h4>
+                  <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                    <div className="flex items-end gap-2 mb-2">
+                      <span className="text-3xl font-bold text-slate-900">
+                        {candidate1.matchScore}%
+                      </span>
+                    </div>
+                    <MatchScore score={candidate1.matchScore || 0} />
+                    <p className="text-xs text-gray-600 mt-2 leading-relaxed">
+                      {candidate1.matchExplanation ||
+                        "No explanation available."}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Skills */}
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                    <Briefcase className="w-4 h-4 text-blue-500" /> Skills
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {candidate1.skillsExtracted.map((skill, i) => (
+                      <span
+                        key={i}
+                        className="px-2.5 py-1 bg-white border border-gray-200 rounded-md text-xs font-medium text-slate-600 shadow-sm">
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Summary */}
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-amber-500" /> Summary
+                  </h4>
+                  <p className="text-sm text-slate-600 leading-relaxed bg-amber-50/50 p-3 rounded-lg border border-amber-100/50">
+                    {candidate1.summary || "No summary available."}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Candidate 2 (Comparison) */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col md:h-full h-auto relative">
+              {!candidate2 ? (
+                <div className="md:absolute md:inset-0 relative h-[60vh] md:h-auto flex flex-col items-center justify-center bg-gray-50/50 p-6 text-center z-10 transition-all">
+                  <div className="w-16 h-16 bg-white rounded-full border border-gray-200 flex items-center justify-center mb-4 shadow-sm">
+                    <Users className="w-8 h-8 text-gray-300" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-slate-900 mb-2">
+                    Select a Candidate to Compare
+                  </h3>
+                  <p className="text-sm text-slate-500 max-w-xs mb-6">
+                    Choose another candidate from the list below to see a
+                    side-by-side comparison.
+                  </p>
+
+                  <div className="w-full max-w-sm max-h-60 overflow-y-auto bg-white rounded-xl border border-gray-200 shadow-sm">
+                    {availableCandidates.map((c) => (
+                      <button
+                        key={c.id}
+                        onClick={() => onSelectCandidate2(c)} // Select candidate
+                        className="w-full text-left px-4 py-3 border-b last:border-0 border-gray-100 hover:bg-indigo-50 transition-colors flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-slate-100 flex-shrink-0 flex items-center justify-center text-xs font-bold text-slate-600">
+                          {c.candidateName.charAt(0)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-slate-900 truncate">
+                            {c.candidateName}
+                          </p>
+                          <p className="text-xs text-slate-500 truncate">
+                            {c.matchScore}% Match • {c.status}
+                          </p>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-gray-300" />
+                      </button>
+                    ))}
+                    {availableCandidates.length === 0 && (
+                      <div className="p-4 text-center text-sm text-gray-400">
+                        No other candidates available.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="bg-gray-50/50 p-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-full bg-slate-800 flex-shrink-0 flex items-center justify-center font-bold text-white text-lg shadow-sm">
+                        {candidate2.candidateName.charAt(0)}
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-slate-900 text-lg">
+                          {candidate2.candidateName}
+                        </h3>
+                        <button
+                          onClick={() => onSelectCandidate2(null as any)}
+                          className="text-xs text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1">
+                          Change <ArrowUpDown className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                    <StatusBadge status={candidate2.status} />
+                  </div>
+
+                  <div className="p-5 space-y-6 md:flex-1 md:overflow-y-auto overflow-visible">
+                    {/* Match Score */}
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-purple-500" /> AI
+                        Match Score
+                      </h4>
+                      <div
+                        className={`p-3 rounded-lg border ${
+                          (candidate2.matchScore || 0) >
+                          (candidate1.matchScore || 0)
+                            ? "bg-emerald-50 border-emerald-100"
+                            : (candidate2.matchScore || 0) <
+                                (candidate1.matchScore || 0)
+                              ? "bg-red-50 border-red-100"
+                              : "bg-gray-50 border-gray-200"
+                        }`}>
+                        <div className="flex items-end gap-2 mb-2">
+                          <span
+                            className={`text-3xl font-bold ${
+                              (candidate2.matchScore || 0) >
+                              (candidate1.matchScore || 0)
+                                ? "text-emerald-700"
+                                : (candidate2.matchScore || 0) <
+                                    (candidate1.matchScore || 0)
+                                  ? "text-red-700"
+                                  : "text-slate-900"
+                            }`}>
+                            {candidate2.matchScore}%
+                          </span>
+                          {candidate2.matchScore && candidate1.matchScore && (
+                            <span className="text-xs font-medium mb-1.5 px-2 py-0.5 rounded-full bg-white/50 border border-black/5">
+                              {candidate2.matchScore > candidate1.matchScore
+                                ? `+${candidate2.matchScore - candidate1.matchScore}%`
+                                : candidate2.matchScore < candidate1.matchScore
+                                  ? `-${candidate1.matchScore - candidate2.matchScore}%`
+                                  : "Same"}
+                            </span>
+                          )}
+                        </div>
+                        <MatchScore score={candidate2.matchScore || 0} />
+                        <p className="text-xs text-gray-600 mt-2 leading-relaxed">
+                          {candidate2.matchExplanation ||
+                            "No explanation available."}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Skills */}
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                        <Briefcase className="w-4 h-4 text-blue-500" /> Skills
+                      </h4>
+                      <div className="flex flex-wrap gap-2">
+                        {candidate2.skillsExtracted.map((skill, i) => {
+                          const isShared =
+                            candidate1.skillsExtracted.includes(skill);
+                          return (
+                            <span
+                              key={i}
+                              className={`px-2.5 py-1 border rounded-md text-xs font-medium shadow-sm transition-colors ${
+                                isShared
+                                  ? "bg-indigo-50 border-indigo-200 text-indigo-700"
+                                  : "bg-white border-gray-200 text-slate-600"
+                              }`}>
+                              {skill} {isShared && "✨"}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Summary */}
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-amber-500" /> Summary
+                      </h4>
+                      <p className="text-sm text-slate-600 leading-relaxed bg-amber-50/50 p-3 rounded-lg border border-amber-100/50">
+                        {candidate2.summary || "No summary available."}
+                      </p>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
@@ -145,10 +410,75 @@ export default function JobDetailPage() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [updateSuccess, setUpdateSuccess] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
   const [interviewSlots, setInterviewSlots] = useState([
     { date: "", time: "" },
   ]);
   const [showInterviewModal, setShowInterviewModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    title: "",
+    company: "",
+    location: "",
+    description: "",
+    requirements: "",
+  });
+
+  // Comparison State
+  const [showComparisonModal, setShowComparisonModal] = useState(false);
+  const [comparisonCandidate, setComparisonCandidate] =
+    useState<Application | null>(null);
+  const [isComparing, setIsComparing] = useState(false);
+
+  const handleEditClick = () => {
+    if (job) {
+      setEditFormData({
+        title: job.title || "",
+        company: job.company || "",
+        location: job.location || "",
+        description: job.description || "",
+        requirements: job.requirements || "",
+      });
+      setShowEditModal(true);
+    }
+  };
+
+  const handleUpdateJob = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true); // Re-use loading or create saving state
+    try {
+      const res = await fetch(`http://localhost:3000/jobs/${jobId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editFormData),
+      });
+
+      if (!res.ok) throw new Error("Failed to update job");
+
+      const updatedJob = await res.json();
+      setJob((prev) => (prev ? { ...prev, ...updatedJob } : null));
+      setShowEditModal(false);
+
+      // Trigger notification sequence
+      setUpdateSuccess(true);
+      setIsClosing(false);
+
+      // Close sequence
+      setTimeout(() => {
+        setIsClosing(true);
+        setTimeout(() => {
+          setUpdateSuccess(false);
+          setIsClosing(false);
+        }, 300); // 300ms for exit animation
+      }, 3000); // Show for 3 seconds
+    } catch (error) {
+      console.error(error);
+      alert("Failed to update job");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const SuccessModal = () => (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
@@ -163,8 +493,7 @@ export default function JobDetailPage() {
         </p>
         <button
           onClick={() => setShowSuccessModal(false)}
-          className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-medium rounded-xl transition-colors shadow-lg shadow-slate-900/20"
-        >
+          className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-medium rounded-xl transition-colors shadow-lg shadow-slate-900/20">
           Awesome
         </button>
       </div>
@@ -210,8 +539,7 @@ export default function JobDetailPage() {
         </p>
         <button
           onClick={() => router.back()}
-          className="px-4 py-2 bg-gray-900 text-white rounded-lg font-medium"
-        >
+          className="px-4 py-2 bg-gray-900 text-white rounded-lg font-medium">
           Go Back
         </button>
       </div>
@@ -339,6 +667,50 @@ export default function JobDetailPage() {
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-slate-900 flex flex-col">
       {showSuccessModal && <SuccessModal />}
+
+      {/* Job Update Success Toast */}
+      {updateSuccess && (
+        <div
+          className={`fixed left-1/2 -translate-x-1/2 z-50 transition-all duration-300 ${
+            isClosing ? "animate-slide-up" : "animate-slide-down"
+          }`}>
+          <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl shadow-lg p-4 flex items-center gap-3 pr-10 relative">
+            <div className="p-2 bg-emerald-100 rounded-lg shrink-0">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+            </div>
+            <div>
+              <h3 className="font-bold text-sm">Update Successful</h3>
+              <p className="text-xs text-emerald-700 mt-0.5">
+                The job details have been saved.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setIsClosing(true);
+                setTimeout(() => {
+                  setUpdateSuccess(false);
+                  setIsClosing(false);
+                }, 300);
+              }}
+              className="absolute top-2 right-2 p-1 hover:bg-emerald-100 rounded-lg text-emerald-600 transition-colors">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Sticky Job Header */}
+      {selectedCandidate && job?.applications && (
+        <ComparisonModal
+          isOpen={showComparisonModal}
+          onClose={() => setShowComparisonModal(false)}
+          candidate1={selectedCandidate}
+          candidate2={comparisonCandidate}
+          candidates={job.applications}
+          onSelectCandidate2={setComparisonCandidate}
+        />
+      )}
+
       {/* Sticky Job Header */}
       <header className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
@@ -346,8 +718,7 @@ export default function JobDetailPage() {
             <div className="flex items-start gap-3 sm:gap-4">
               <button
                 onClick={() => router.back()}
-                className="mt-0.5 sm:mt-1 p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg text-slate-500 transition-colors"
-              >
+                className="mt-0.5 sm:mt-1 p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg text-slate-500 transition-colors">
                 <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
               <div className="flex-1 min-w-0">
@@ -377,11 +748,12 @@ export default function JobDetailPage() {
                   jobStatus === "Open"
                     ? "text-red-600 bg-white border-red-200 hover:bg-red-50"
                     : "text-emerald-600 bg-white border-emerald-200 hover:bg-emerald-50"
-                }`}
-              >
+                }`}>
                 {jobStatus === "Open" ? "Close Job" : "Reopen Job"}
               </button>
-              <button className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-white bg-slate-900 rounded-lg hover:bg-slate-800 shadow-sm">
+              <button
+                onClick={handleEditClick}
+                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-white bg-slate-900 rounded-lg hover:bg-slate-800 shadow-sm">
                 <Edit3 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 <span className="hidden sm:inline">Edit Job</span>
                 <span className="sm:hidden">Edit</span>
@@ -396,11 +768,10 @@ export default function JobDetailPage() {
         <div
           className={`flex-1 min-w-0 transition-all duration-300 ${
             selectedCandidate ? "mr-0 lg:mr-[400px]" : ""
-          }`}
-        >
+          }`}>
           {/* Job Summary Section */}
           <section className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8">
-            <p className="text-xs sm:text-sm text-slate-600 mb-4 leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-600 mb-4 leading-relaxed whitespace-pre-wrap">
               {job.description}
             </p>
 
@@ -409,8 +780,7 @@ export default function JobDetailPage() {
                 {skills.slice(0, 4).map((skill, idx) => (
                   <span
                     key={idx}
-                    className="px-2 sm:px-2.5 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-md border border-gray-200"
-                  >
+                    className="px-2 sm:px-2.5 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-md border border-gray-200">
                     {skill}
                   </span>
                 ))}
@@ -461,8 +831,7 @@ export default function JobDetailPage() {
                       activeTab === tab
                         ? "bg-white text-slate-900 shadow-sm"
                         : "text-slate-500 hover:text-slate-700"
-                    }`}
-                  >
+                    }`}>
                     {tab}
                   </button>
                 ))}
@@ -511,8 +880,7 @@ export default function JobDetailPage() {
                     selectedCandidate?.id === candidate.id
                       ? "border-indigo-500 ring-1 ring-indigo-500 shadow-md"
                       : "border-gray-200 hover:border-indigo-200"
-                  }`}
-                >
+                  }`}>
                   <div className="flex items-start sm:items-center justify-between gap-2 sm:gap-4">
                     {/* Left: Info */}
                     <div className="flex items-start sm:items-center gap-3 sm:gap-4 flex-1 min-w-0">
@@ -558,8 +926,7 @@ export default function JobDetailPage() {
                           .map((skill, i) => (
                             <span
                               key={i}
-                              className="px-2 py-0.5 bg-gray-50 border border-gray-100 rounded text-xs text-gray-600"
-                            >
+                              className="px-2 py-0.5 bg-gray-50 border border-gray-100 rounded text-xs text-gray-600">
                               {skill}
                             </span>
                           ))}
@@ -599,8 +966,7 @@ export default function JobDetailPage() {
               </div>
               <button
                 onClick={() => setSelectedCandidate(null)}
-                className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg shrink-0"
-              >
+                className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg shrink-0">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -613,17 +979,24 @@ export default function JobDetailPage() {
                   href={selectedCandidate.resumeUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 border border-gray-200 rounded-lg text-xs sm:text-sm font-medium text-slate-700 hover:bg-gray-50"
-                >
+                  className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 border border-gray-200 rounded-lg text-xs sm:text-sm font-medium text-slate-700 hover:bg-gray-50">
                   <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   <span className="hidden sm:inline">View</span> Resume
                 </a>
                 <button
                   onClick={() => setShowInterviewModal(true)}
-                  className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 border border-gray-200 rounded-lg text-xs sm:text-sm font-medium text-slate-700 hover:bg-gray-50"
-                >
+                  className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 border border-gray-200 rounded-lg text-xs sm:text-sm font-medium text-slate-700 hover:bg-gray-50">
                   <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   Interview
+                </button>
+                <button
+                  onClick={() => {
+                    setComparisonCandidate(null); // Reset selection
+                    setShowComparisonModal(true);
+                  }}
+                  className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 border border-gray-200 rounded-lg text-xs sm:text-sm font-medium text-slate-700 hover:bg-gray-50 col-span-2 sm:col-span-1">
+                  <ArrowRightLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  Compare
                 </button>
               </div>
 
@@ -673,8 +1046,7 @@ export default function JobDetailPage() {
                     selectedCandidate.skillsExtracted.map((skill, i) => (
                       <span
                         key={i}
-                        className="px-2 sm:px-3 py-0.5 sm:py-1 bg-white border border-gray-200 rounded-full text-[10px] sm:text-xs font-medium text-slate-600"
-                      >
+                        className="px-2 sm:px-3 py-0.5 sm:py-1 bg-white border border-gray-200 rounded-full text-[10px] sm:text-xs font-medium text-slate-600">
                         {skill}
                       </span>
                     ))
@@ -697,8 +1069,7 @@ export default function JobDetailPage() {
                     selectedCandidate.status === "accepted"
                       ? "bg-emerald-50 text-emerald-700"
                       : "bg-red-50 text-red-700"
-                  }`}
-                >
+                  }`}>
                   {selectedCandidate.status === "accepted" ? (
                     <CheckCircle2 className="w-5 h-5" />
                   ) : (
@@ -712,8 +1083,7 @@ export default function JobDetailPage() {
                   {selectedCandidate.status === "applied" && (
                     <button
                       onClick={() => handleShortlist(selectedCandidate)}
-                      className="w-full py-2 sm:py-2.5 rounded-lg border border-purple-200 bg-purple-50 text-purple-700 font-medium text-xs sm:text-sm hover:bg-purple-100 flex items-center justify-center gap-1.5 sm:gap-2 transition-colors"
-                    >
+                      className="w-full py-2 sm:py-2.5 rounded-lg border border-purple-200 bg-purple-50 text-purple-700 font-medium text-xs sm:text-sm hover:bg-purple-100 flex items-center justify-center gap-1.5 sm:gap-2 transition-colors">
                       <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Shortlist
                     </button>
                   )}
@@ -724,8 +1094,7 @@ export default function JobDetailPage() {
                   ) && (
                     <button
                       onClick={() => handleScheduleInterview(selectedCandidate)}
-                      className="w-full py-2 sm:py-2.5 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 font-medium text-xs sm:text-sm hover:bg-blue-100 flex items-center justify-center gap-1.5 sm:gap-2 transition-colors"
-                    >
+                      className="w-full py-2 sm:py-2.5 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 font-medium text-xs sm:text-sm hover:bg-blue-100 flex items-center justify-center gap-1.5 sm:gap-2 transition-colors">
                       <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />{" "}
                       Schedule Interview
                     </button>
@@ -738,16 +1107,14 @@ export default function JobDetailPage() {
                         onClick={() =>
                           handleDecision("reject", selectedCandidate)
                         }
-                        className="w-full py-2 sm:py-2.5 rounded-lg border border-red-100 text-red-600 font-medium text-xs sm:text-sm hover:bg-red-50 flex items-center justify-center gap-1.5 sm:gap-2"
-                      >
+                        className="w-full py-2 sm:py-2.5 rounded-lg border border-red-100 text-red-600 font-medium text-xs sm:text-sm hover:bg-red-50 flex items-center justify-center gap-1.5 sm:gap-2">
                         <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Reject
                       </button>
                       <button
                         onClick={() =>
                           handleDecision("accept", selectedCandidate)
                         }
-                        className="w-full py-2 sm:py-2.5 rounded-lg bg-slate-900 text-white font-medium text-xs sm:text-sm hover:bg-slate-800 flex items-center justify-center gap-1.5 sm:gap-2 shadow-sm"
-                      >
+                        className="w-full py-2 sm:py-2.5 rounded-lg bg-slate-900 text-white font-medium text-xs sm:text-sm hover:bg-slate-800 flex items-center justify-center gap-1.5 sm:gap-2 shadow-sm">
                         <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />{" "}
                         Accept
                       </button>
@@ -762,8 +1129,7 @@ export default function JobDetailPage() {
                       onClick={() =>
                         handleDecision("reject", selectedCandidate)
                       }
-                      className="w-full py-2 sm:py-2.5 rounded-lg border border-red-100 text-red-600 font-medium text-xs sm:text-sm hover:bg-red-50 flex items-center justify-center gap-1.5 sm:gap-2"
-                    >
+                      className="w-full py-2 sm:py-2.5 rounded-lg border border-red-100 text-red-600 font-medium text-xs sm:text-sm hover:bg-red-50 flex items-center justify-center gap-1.5 sm:gap-2">
                       <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Reject
                     </button>
                   )}
@@ -798,8 +1164,7 @@ export default function JobDetailPage() {
               </h3>
               <button
                 onClick={closeEmailModal}
-                className="p-1.5 hover:bg-gray-200 rounded-lg"
-              >
+                className="p-1.5 hover:bg-gray-200 rounded-lg">
                 <X className="w-5 h-5 text-gray-400 hover:text-gray-600" />
               </button>
             </div>
@@ -867,8 +1232,7 @@ export default function JobDetailPage() {
                         {interviewSlots.map((slot, index) => (
                           <div
                             key={index}
-                            className="flex gap-2 items-start p-3 bg-slate-50 rounded-lg border border-slate-200"
-                          >
+                            className="flex gap-2 items-start p-3 bg-slate-50 rounded-lg border border-slate-200">
                             <div className="flex-1 grid grid-cols-2 gap-2">
                               <div>
                                 <input
@@ -904,8 +1268,7 @@ export default function JobDetailPage() {
                               <button
                                 type="button"
                                 onClick={() => removeInterviewSlot(index)}
-                                className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                              >
+                                className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors">
                                 <X className="w-4 h-4" />
                               </button>
                             )}
@@ -916,8 +1279,7 @@ export default function JobDetailPage() {
                       <button
                         type="button"
                         onClick={addInterviewSlot}
-                        className="mt-2 w-full py-2 text-sm font-medium text-slate-600 hover:text-slate-900 border-2 border-dashed border-slate-300 hover:border-slate-400 rounded-lg transition-colors flex items-center justify-center gap-2"
-                      >
+                        className="mt-2 w-full py-2 text-sm font-medium text-slate-600 hover:text-slate-900 border-2 border-dashed border-slate-300 hover:border-slate-400 rounded-lg transition-colors flex items-center justify-center gap-2">
                         <Calendar className="w-4 h-4" />
                         Add Another Time Option
                       </button>
@@ -980,8 +1342,7 @@ export default function JobDetailPage() {
             <div className="px-4 sm:px-6 py-3 sm:py-4 bg-gray-50 border-t border-gray-100 flex gap-2 sm:gap-3 shrink-0">
               <button
                 onClick={closeEmailModal}
-                className="flex-1 sm:flex-initial px-4 py-2 text-sm font-medium text-slate-600 hover:bg-gray-100 rounded-lg"
-              >
+                className="flex-1 sm:flex-initial px-4 py-2 text-sm font-medium text-slate-600 hover:bg-gray-100 rounded-lg">
                 Cancel
               </button>
               <button
@@ -1147,8 +1508,7 @@ export default function JobDetailPage() {
                   emailModal.type === "accept"
                     ? "bg-black hover:bg-slate-800"
                     : "bg-red-600 hover:bg-red-700"
-                }`}
-              >
+                }`}>
                 {sendingEmail ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -1183,8 +1543,7 @@ export default function JobDetailPage() {
               </div>
               <button
                 onClick={() => setShowInterviewModal(false)}
-                className="p-1.5 hover:bg-gray-200 rounded-lg"
-              >
+                className="p-1.5 hover:bg-gray-200 rounded-lg">
                 <X className="w-5 h-5 text-gray-400 hover:text-gray-600" />
               </button>
             </div>
@@ -1233,8 +1592,7 @@ export default function JobDetailPage() {
                     {interviewSlots.map((slot, index) => (
                       <div
                         key={index}
-                        className="flex gap-2 items-start p-3 bg-slate-50 rounded-lg border border-slate-200"
-                      >
+                        className="flex gap-2 items-start p-3 bg-slate-50 rounded-lg border border-slate-200">
                         <div className="flex-1 grid grid-cols-2 gap-2">
                           <div>
                             <input
@@ -1270,8 +1628,7 @@ export default function JobDetailPage() {
                           <button
                             type="button"
                             onClick={() => removeInterviewSlot(index)}
-                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                          >
+                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors">
                             <X className="w-4 h-4" />
                           </button>
                         )}
@@ -1282,8 +1639,7 @@ export default function JobDetailPage() {
                   <button
                     type="button"
                     onClick={addInterviewSlot}
-                    className="mt-2 w-full py-2 text-sm font-medium text-slate-600 hover:text-slate-900 border-2 border-dashed border-slate-300 hover:border-slate-400 rounded-lg transition-colors flex items-center justify-center gap-2"
-                  >
+                    className="mt-2 w-full py-2 text-sm font-medium text-slate-600 hover:text-slate-900 border-2 border-dashed border-slate-300 hover:border-slate-400 rounded-lg transition-colors flex items-center justify-center gap-2">
                     <Calendar className="w-4 h-4" />
                     Add Another Time Option
                   </button>
@@ -1335,8 +1691,7 @@ export default function JobDetailPage() {
             <div className="px-4 sm:px-6 py-3 sm:py-4 bg-gray-50 border-t border-gray-100 flex gap-2 sm:gap-3 shrink-0">
               <button
                 onClick={() => setShowInterviewModal(false)}
-                className="flex-1 sm:flex-initial px-4 py-2 text-sm font-medium text-slate-600 hover:bg-gray-100 rounded-lg"
-              >
+                className="flex-1 sm:flex-initial px-4 py-2 text-sm font-medium text-slate-600 hover:bg-gray-100 rounded-lg">
                 Cancel
               </button>
               <button
@@ -1470,8 +1825,7 @@ export default function JobDetailPage() {
                 }}
                 className={`flex-1 sm:flex-initial px-4 py-2 text-sm font-medium text-white rounded-lg shadow-sm flex items-center justify-center gap-2 bg-black hover:bg-slate-800 ${
                   sendingEmail ? "opacity-70 cursor-not-allowed" : ""
-                }`}
-              >
+                }`}>
                 {sendingEmail ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -1485,6 +1839,133 @@ export default function JobDetailPage() {
                     <span className="sm:hidden">Send</span>
                   </>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Job Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between shrink-0 bg-gray-50/50">
+              <h3 className="text-lg font-bold text-slate-900">Edit Job</h3>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-600 transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={handleUpdateJob}
+              className="flex-1 overflow-y-auto p-6 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1">
+                    Job Title
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editFormData.title}
+                    onChange={(e) =>
+                      setEditFormData({
+                        ...editFormData,
+                        title: e.target.value,
+                      })
+                    }
+                    className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 outline-none transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1">
+                    Company
+                  </label>
+                  <input
+                    type="text"
+                    value={editFormData.company}
+                    onChange={(e) =>
+                      setEditFormData({
+                        ...editFormData,
+                        company: e.target.value,
+                      })
+                    }
+                    className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 outline-none transition-all"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">
+                  Location
+                </label>
+                <input
+                  type="text"
+                  value={editFormData.location}
+                  onChange={(e) =>
+                    setEditFormData({
+                      ...editFormData,
+                      location: e.target.value,
+                    })
+                  }
+                  className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 outline-none transition-all"
+                  placeholder="e.g. Remote, New York, NY"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">
+                  Description
+                </label>
+                <textarea
+                  required
+                  rows={6}
+                  value={editFormData.description}
+                  onChange={(e) =>
+                    setEditFormData({
+                      ...editFormData,
+                      description: e.target.value,
+                    })
+                  }
+                  className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 outline-none transition-all resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">
+                  Requirements
+                </label>
+                <textarea
+                  required
+                  rows={4}
+                  value={editFormData.requirements}
+                  onChange={(e) =>
+                    setEditFormData({
+                      ...editFormData,
+                      requirements: e.target.value,
+                    })
+                  }
+                  className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 outline-none transition-all resize-none"
+                />
+                <p className="text-xs text-slate-400 mt-1">
+                  List requirements separated by commas or new lines.
+                </p>
+              </div>
+            </form>
+
+            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowEditModal(false)}
+                className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-gray-200 rounded-lg transition-colors">
+                Cancel
+              </button>
+              <button
+                onClick={handleUpdateJob}
+                className="px-4 py-2 text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 rounded-lg transition-colors shadow-sm">
+                Save Changes
               </button>
             </div>
           </div>

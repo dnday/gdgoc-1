@@ -225,7 +225,7 @@ export default function Dashboard() {
               Manage open positions and track applicant pipelines.
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 self-end sm:self-auto">
             <button
               onClick={() => setIsModalOpen(true)}
               className="flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-gray-900 hover:bg-gray-800 text-white text-sm sm:text-base font-medium rounded-xl transition-all">

@@ -130,8 +130,7 @@ export default function CandidateJobDetailPage() {
         </p>
         <button
           onClick={() => router.back()}
-          className="px-4 py-2 bg-gray-900 text-white rounded-lg font-medium"
-        >
+          className="px-4 py-2 bg-gray-900 text-white rounded-lg font-medium">
           Go Back
         </button>
       </div>
@@ -149,8 +148,7 @@ export default function CandidateJobDetailPage() {
             <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
               <button
                 onClick={() => router.back()}
-                className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg text-slate-500 transition-colors shrink-0"
-              >
+                className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg text-slate-500 transition-colors shrink-0">
                 <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
               <div className="min-w-0 flex-1">
@@ -223,8 +221,7 @@ export default function CandidateJobDetailPage() {
               {skills.map((skill, idx) => (
                 <span
                   key={idx}
-                  className="px-2 sm:px-3 py-1 sm:py-1.5 bg-gray-100 text-gray-700 text-xs sm:text-sm font-medium rounded-full"
-                >
+                  className="px-2 sm:px-3 py-1 sm:py-1.5 bg-gray-100 text-gray-700 text-xs sm:text-sm font-medium rounded-full">
                   {skill}
                 </span>
               ))}
@@ -251,8 +248,7 @@ export default function CandidateJobDetailPage() {
                           : applicationStatus === "rejected"
                             ? "bg-red-50 border border-red-200"
                             : "bg-purple-50 border border-purple-200"
-                    }`}
-                  >
+                    }`}>
                     <p
                       className={`text-sm font-semibold ${
                         applicationStatus === "accepted"
@@ -262,8 +258,7 @@ export default function CandidateJobDetailPage() {
                             : applicationStatus === "rejected"
                               ? "text-red-700"
                               : "text-purple-700"
-                      }`}
-                    >
+                      }`}>
                       {applicationStatus === "accepted"
                         ? "🎉 Congratulations! Your application has been accepted!"
                         : applicationStatus === "interview_scheduled"
@@ -280,8 +275,7 @@ export default function CandidateJobDetailPage() {
             ) : job.isActive ? (
               <button
                 onClick={() => setShowApplyModal(true)}
-                className="w-full py-3 sm:py-3.5 bg-gray-900 hover:bg-gray-800 text-white text-sm sm:text-base font-medium rounded-xl transition-all flex items-center justify-center gap-2"
-              >
+                className="w-full py-3 sm:py-3.5 bg-gray-900 hover:bg-gray-800 text-white text-sm sm:text-base font-medium rounded-xl transition-all flex items-center justify-center gap-2">
                 <Send className="w-4 h-4 sm:w-5 sm:h-5" />
                 Apply for this Job
               </button>
@@ -447,8 +441,7 @@ function ApplyModal({
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 sm:p-2 hover:bg-gray-200 rounded-lg transition-colors shrink-0"
-            >
+              className="p-1.5 sm:p-2 hover:bg-gray-200 rounded-lg transition-colors shrink-0">
               <X className="w-5 h-5 text-gray-500" />
             </button>
           </div>
@@ -457,8 +450,7 @@ function ApplyModal({
         {/* Form */}
         <form
           onSubmit={handleSubmit}
-          className="p-4 sm:p-6 space-y-3 sm:space-y-4 overflow-y-auto max-h-[calc(90vh-120px)]"
-        >
+          className="p-4 sm:p-6 space-y-3 sm:space-y-4 overflow-y-auto max-h-[calc(90vh-120px)]">
           {error && (
             <div className="p-3 bg-red-50 text-red-600 text-sm rounded-xl border border-red-100">
               {error}
@@ -504,8 +496,7 @@ function ApplyModal({
                 file
                   ? "border-emerald-300 bg-emerald-50"
                   : "border-gray-200 hover:border-gray-300"
-              }`}
-            >
+              }`}>
               <input
                 type="file"
                 accept=".pdf,.doc,.docx"
@@ -530,8 +521,7 @@ function ApplyModal({
                         e.stopPropagation();
                         setFile(null);
                       }}
-                      className="p-1 hover:bg-emerald-100 rounded"
-                    >
+                      className="p-1 hover:bg-emerald-100 rounded">
                       <X className="w-4 h-4 text-gray-500" />
                     </button>
                   </div>
@@ -555,15 +545,13 @@ function ApplyModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2.5 sm:py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm sm:text-base font-medium rounded-xl transition-all"
-            >
+              className="flex-1 py-2.5 sm:py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm sm:text-base font-medium rounded-xl transition-all">
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading || !file}
-              className="flex-1 py-2.5 sm:py-3 bg-gray-900 hover:bg-gray-800 text-white text-sm sm:text-base font-medium rounded-xl transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
+              className="flex-1 py-2.5 sm:py-3 bg-gray-900 hover:bg-gray-800 text-white text-sm sm:text-base font-medium rounded-xl transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2">
               {loading ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
