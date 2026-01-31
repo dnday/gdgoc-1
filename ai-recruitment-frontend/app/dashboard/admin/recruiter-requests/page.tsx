@@ -1,5 +1,7 @@
 "use client";
 
+import ConfirmDialog from "@/components/ConfirmDialog";
+import Toast from "@/components/Toast";
 import Cookies from "js-cookie";
 import {
   Briefcase,
@@ -45,6 +47,16 @@ export default function AdminRecruiterRequests() {
     useState<RecruiterRequest | null>(null);
   const [reviewNotes, setReviewNotes] = useState("");
   const [processing, setProcessing] = useState(false);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error" | "info" | "warning";
+  } | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    message: string;
+    title: string;
+    onConfirm: () => void;
+    type: "danger" | "warning" | "info";
+  } | null>(null);
 
   useEffect(() => {
     fetchRequests();
@@ -111,10 +123,16 @@ export default function AdminRecruiterRequests() {
       await fetchRequests();
       setSelectedRequest(null);
       setReviewNotes("");
-      alert(`Request ${action}d successfully! Email sent to user.`);
+      setToast({
+        message: `Request ${action}d successfully! Email sent to user.`,
+        type: "success",
+      });
     } catch (err) {
       console.error("Error reviewing request:", err);
-      alert("Failed to process request");
+      setToast({
+        message: "Failed to process request",
+        type: "error",
+      });
     } finally {
       setProcessing(false);
     }
@@ -364,6 +382,26 @@ export default function AdminRecruiterRequests() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+
+      {/* Confirm Dialog */}
+      {confirmDialog && (
+        <ConfirmDialog
+          title={confirmDialog.title}
+          message={confirmDialog.message}
+          type={confirmDialog.type}
+          onConfirm={confirmDialog.onConfirm}
+          onCancel={() => setConfirmDialog(null)}
+        />
       )}
     </div>
   );

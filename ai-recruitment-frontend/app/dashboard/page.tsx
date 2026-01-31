@@ -1,11 +1,13 @@
 "use client";
 
+import AccountDropdown from "@/components/AccountDropdown";
+import ConfirmDialog from "@/components/ConfirmDialog";
+import CreateJobModal from "@/components/CreateJobModal";
+import Toast from "@/components/Toast";
 import Cookies from "js-cookie";
-import { Briefcase, Plus, Search, Users, Check, Trash2 } from "lucide-react";
+import { Briefcase, Check, Plus, Search, Trash2, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import AccountDropdown from "@/components/AccountDropdown";
-import CreateJobModal from "@/components/CreateJobModal";
 
 // Job type definition from API
 interface ApiJob {
@@ -72,6 +74,14 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [jobs, setJobs] = useState<Job[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error" | "info" | "warning";
+  } | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    message: string;
+    onConfirm: () => void;
+  } | null>(null);
 
   // Fetch jobs from API
   const fetchJobs = useCallback(async () => {
@@ -154,7 +164,10 @@ export default function Dashboard() {
       if (!res.ok) throw new Error("Failed to update status");
     } catch (error) {
       console.error("Failed to update job status:", error);
-      alert("Failed to update job status. Please try again.");
+      setToast({
+        message: "Failed to update job status. Please try again.",
+        type: "error",
+      });
 
       // 4. Revert on failure
       setJobs((prev) =>
@@ -166,31 +179,34 @@ export default function Dashboard() {
   };
 
   const handleDeleteJob = async (jobId: string) => {
-    if (
-      !confirm(
+    setConfirmDialog({
+      message:
         "Are you sure you want to delete this job? This action cannot be undone.",
-      )
-    )
-      return;
+      onConfirm: async () => {
+        // 1. Optimistic Update
+        const previousJobs = [...jobs];
+        setJobs((prev) => prev.filter((j) => j.id !== jobId));
 
-    // 1. Optimistic Update
-    const previousJobs = [...jobs];
-    setJobs((prev) => prev.filter((j) => j.id !== jobId));
+        try {
+          // 2. Call API
+          const res = await fetch(`http://localhost:3000/jobs/${jobId}`, {
+            method: "DELETE",
+          });
 
-    try {
-      // 2. Call API
-      const res = await fetch(`http://localhost:3000/jobs/${jobId}`, {
-        method: "DELETE",
-      });
+          if (!res.ok) throw new Error("Failed to delete job");
+          setToast({ message: "Job deleted successfully", type: "success" });
+        } catch (error) {
+          console.error("Failed to delete job:", error);
+          setToast({
+            message: "Failed to delete job. Please try again.",
+            type: "error",
+          });
 
-      if (!res.ok) throw new Error("Failed to delete job");
-    } catch (error) {
-      console.error("Failed to delete job:", error);
-      alert("Failed to delete job. Please try again.");
-
-      // 3. Revert on failure
-      setJobs(previousJobs);
-    }
+          // 3. Revert on failure
+          setJobs(previousJobs);
+        }
+      },
+    });
   };
 
   if (loading) {
@@ -209,10 +225,7 @@ export default function Dashboard() {
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2 mb-2">
               <div className="bg-gray-900 text-white p-2 rounded-lg shadow-sm">
-                <Check
-                  className="w-5 h-5"
-                  strokeWidth={3}
-                />
+                <Check className="w-5 h-5" strokeWidth={3} />
               </div>
               <span className="text-xl font-extrabold text-gray-900 tracking-tight">
                 RecruitPro
@@ -228,7 +241,8 @@ export default function Dashboard() {
           <div className="flex items-center gap-3 self-end sm:self-auto">
             <button
               onClick={() => setIsModalOpen(true)}
-              className="flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-gray-900 hover:bg-gray-800 text-white text-sm sm:text-base font-medium rounded-xl transition-all">
+              className="flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-gray-900 hover:bg-gray-800 text-white text-sm sm:text-base font-medium rounded-xl transition-all"
+            >
               <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
               <span className="hidden sm:inline">Create New Job</span>
               <span className="sm:hidden">New Job</span>
@@ -258,7 +272,8 @@ export default function Dashboard() {
                   filter === f
                     ? "bg-white text-gray-900 shadow-sm"
                     : "text-gray-500 hover:text-gray-700"
-                }`}>
+                }`}
+              >
                 {f}
               </button>
             ))}
@@ -273,7 +288,8 @@ export default function Dashboard() {
               <p className="text-gray-500">No jobs found.</p>
               <button
                 onClick={() => setIsModalOpen(true)}
-                className="mt-4 text-blue-600 font-medium hover:text-blue-700">
+                className="mt-4 text-blue-600 font-medium hover:text-blue-700"
+              >
                 Create your first job
               </button>
             </div>
@@ -282,7 +298,8 @@ export default function Dashboard() {
               <div
                 key={job.id}
                 onClick={() => router.push(`/dashboard/jobs/${job.id}`)}
-                className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-6 hover:shadow-lg hover:shadow-gray-100/50 transition-all cursor-pointer">
+                className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-6 hover:shadow-lg hover:shadow-gray-100/50 transition-all cursor-pointer"
+              >
                 <div className="flex items-start gap-3 sm:gap-4">
                   {/* Icon - hidden on mobile */}
                   <div className="hidden sm:flex w-12 h-12 bg-blue-50 rounded-xl items-center justify-center flex-shrink-0">
@@ -299,7 +316,8 @@ export default function Dashboard() {
                         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-0.5 text-xs sm:text-sm text-gray-500">
                           <span
                             className="truncate max-w-[150px]"
-                            title={job.recruiterName}>
+                            title={job.recruiterName}
+                          >
                             by {job.recruiterName}
                           </span>
                           <span className="hidden sm:inline">•</span>
@@ -318,7 +336,8 @@ export default function Dashboard() {
                               handleDeleteJob(job.id);
                             }}
                             className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                            title="Delete Job">
+                            title="Delete Job"
+                          >
                             <Trash2 className="w-4 h-4" />
                           </button>
                           <div className="h-4 w-px bg-gray-200" />{" "}
@@ -332,7 +351,8 @@ export default function Dashboard() {
                               job.status === "Open"
                                 ? "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                                 : "text-blue-600 hover:bg-blue-50 hover:text-blue-700"
-                            }`}>
+                            }`}
+                          >
                             {job.status === "Open" ? "Close Job" : "Reopen Job"}
                           </button>
                         </div>
@@ -342,7 +362,8 @@ export default function Dashboard() {
                             job.status === "Open"
                               ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                               : "bg-gray-50 text-gray-600 border-gray-200"
-                          }`}>
+                          }`}
+                        >
                           {job.status === "Open" && (
                             <span className="relative flex h-2 w-2">
                               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -370,7 +391,8 @@ export default function Dashboard() {
                       {job.skills.slice(0, 3).map((skill, index) => (
                         <span
                           key={index}
-                          className="px-2 sm:px-3 py-0.5 sm:py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
+                          className="px-2 sm:px-3 py-0.5 sm:py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full"
+                        >
                           {skill}
                         </span>
                       ))}
@@ -405,6 +427,28 @@ export default function Dashboard() {
         onClose={() => setIsModalOpen(false)}
         onSuccess={fetchJobs}
       />
+
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+
+      {/* Confirm Dialog */}
+      {confirmDialog && (
+        <ConfirmDialog
+          title="Delete Job"
+          message={confirmDialog.message}
+          type="danger"
+          confirmText="Delete"
+          cancelText="Cancel"
+          onConfirm={confirmDialog.onConfirm}
+          onCancel={() => setConfirmDialog(null)}
+        />
+      )}
     </div>
   );
 }

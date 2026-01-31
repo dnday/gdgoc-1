@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
-import { Upload, FileText, X, CheckCircle } from "lucide-react";
+import { CheckCircle, FileText, Upload, X } from "lucide-react";
+import { useCallback, useRef, useState } from "react";
 
 interface FileUploadProps {
   onFileSelect: (file: File) => void;
@@ -38,11 +38,11 @@ export default function FileUpload({
         if (file.type === "application/pdf") {
           onFileSelect(file);
         } else {
-          alert("Please upload a PDF file only.");
+          onError?.("Please upload a PDF file only.");
         }
       }
     },
-    [onFileSelect],
+    [onFileSelect, onError],
   );
 
   const handleFileChange = useCallback(
@@ -53,11 +53,11 @@ export default function FileUpload({
         if (file.type === "application/pdf") {
           onFileSelect(file);
         } else {
-          alert("Please upload a PDF file only.");
+          onError?.("Please upload a PDF file only.");
         }
       }
     },
-    [onFileSelect],
+    [onFileSelect, onError],
   );
 
   const handleClick = () => {
@@ -83,7 +83,8 @@ export default function FileUpload({
             <CheckCircle className="w-5 h-5 text-emerald-500" />
             <button
               onClick={onRemoveFile}
-              className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all">
+              className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+            >
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -102,7 +103,8 @@ export default function FileUpload({
         isDragOver
           ? "border-blue-400 bg-blue-50"
           : "border-gray-200 hover:border-gray-300 hover:bg-gray-50/50"
-      }`}>
+      }`}
+    >
       <input
         ref={fileInputRef}
         type="file"

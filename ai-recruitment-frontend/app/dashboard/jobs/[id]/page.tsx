@@ -1,5 +1,7 @@
 "use client";
 
+import ConfirmDialog from "@/components/ConfirmDialog";
+import Toast from "@/components/Toast";
 import {
   ArrowLeft,
   ArrowRightLeft,
@@ -95,7 +97,8 @@ const StatusBadge = ({ status }: { status: string }) => {
     <span
       className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ring-1 ring-inset ${
         styles[status] || styles.applied
-      }`}>
+      }`}
+    >
       {displayStatus}
     </span>
   );
@@ -153,7 +156,8 @@ const ComparisonModal = ({
           </h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors">
+            className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -213,7 +217,8 @@ const ComparisonModal = ({
                     {candidate1.skillsExtracted.map((skill, i) => (
                       <span
                         key={i}
-                        className="px-2.5 py-1 bg-white border border-gray-200 rounded-md text-xs font-medium text-slate-600 shadow-sm">
+                        className="px-2.5 py-1 bg-white border border-gray-200 rounded-md text-xs font-medium text-slate-600 shadow-sm"
+                      >
                         {skill}
                       </span>
                     ))}
@@ -252,7 +257,8 @@ const ComparisonModal = ({
                       <button
                         key={c.id}
                         onClick={() => onSelectCandidate2(c)} // Select candidate
-                        className="w-full text-left px-4 py-3 border-b last:border-0 border-gray-100 hover:bg-indigo-50 transition-colors flex items-center gap-3">
+                        className="w-full text-left px-4 py-3 border-b last:border-0 border-gray-100 hover:bg-indigo-50 transition-colors flex items-center gap-3"
+                      >
                         <div className="w-8 h-8 rounded-full bg-slate-100 flex-shrink-0 flex items-center justify-center text-xs font-bold text-slate-600">
                           {c.candidateName.charAt(0)}
                         </div>
@@ -287,7 +293,8 @@ const ComparisonModal = ({
                         </h3>
                         <button
                           onClick={() => onSelectCandidate2(null as any)}
-                          className="text-xs text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1">
+                          className="text-xs text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1"
+                        >
                           Change <ArrowUpDown className="w-3 h-3" />
                         </button>
                       </div>
@@ -311,7 +318,8 @@ const ComparisonModal = ({
                                 (candidate1.matchScore || 0)
                               ? "bg-red-50 border-red-100"
                               : "bg-gray-50 border-gray-200"
-                        }`}>
+                        }`}
+                      >
                         <div className="flex items-end gap-2 mb-2">
                           <span
                             className={`text-3xl font-bold ${
@@ -322,7 +330,8 @@ const ComparisonModal = ({
                                     (candidate1.matchScore || 0)
                                   ? "text-red-700"
                                   : "text-slate-900"
-                            }`}>
+                            }`}
+                          >
                             {candidate2.matchScore}%
                           </span>
                           {candidate2.matchScore && candidate1.matchScore && (
@@ -359,7 +368,8 @@ const ComparisonModal = ({
                                 isShared
                                   ? "bg-indigo-50 border-indigo-200 text-indigo-700"
                                   : "bg-white border-gray-200 text-slate-600"
-                              }`}>
+                              }`}
+                            >
                               {skill} {isShared && "✨"}
                             </span>
                           );
@@ -431,6 +441,18 @@ export default function JobDetailPage() {
     useState<Application | null>(null);
   const [isComparing, setIsComparing] = useState(false);
 
+  // Toast and Confirm Dialog States
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error" | "info" | "warning";
+  } | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    message: string;
+    title: string;
+    onConfirm: () => void;
+    type: "danger" | "warning" | "info";
+  } | null>(null);
+
   const handleEditClick = () => {
     if (job) {
       setEditFormData({
@@ -474,7 +496,10 @@ export default function JobDetailPage() {
       }, 3000); // Show for 3 seconds
     } catch (error) {
       console.error(error);
-      alert("Failed to update job");
+      setToast({
+        message: "Failed to update job",
+        type: "error",
+      });
     } finally {
       setLoading(false);
     }
@@ -493,7 +518,8 @@ export default function JobDetailPage() {
         </p>
         <button
           onClick={() => setShowSuccessModal(false)}
-          className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-medium rounded-xl transition-colors shadow-lg shadow-slate-900/20">
+          className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-medium rounded-xl transition-colors shadow-lg shadow-slate-900/20"
+        >
           Awesome
         </button>
       </div>
@@ -539,7 +565,8 @@ export default function JobDetailPage() {
         </p>
         <button
           onClick={() => router.back()}
-          className="px-4 py-2 bg-gray-900 text-white rounded-lg font-medium">
+          className="px-4 py-2 bg-gray-900 text-white rounded-lg font-medium"
+        >
           Go Back
         </button>
       </div>
@@ -607,13 +634,22 @@ export default function JobDetailPage() {
           setSelectedCandidate({ ...candidate, status: "shortlisted" });
         }
 
-        alert("✅ Candidate shortlisted successfully!");
+        setToast({
+          message: "Candidate shortlisted successfully!",
+          type: "success",
+        });
       } else {
-        alert("Failed to shortlist candidate");
+        setToast({
+          message: "Failed to shortlist candidate",
+          type: "error",
+        });
       }
     } catch (error) {
       console.error("Error shortlisting candidate:", error);
-      alert("An error occurred while shortlisting");
+      setToast({
+        message: "An error occurred while shortlisting",
+        type: "error",
+      });
     }
   };
 
@@ -659,7 +695,10 @@ export default function JobDetailPage() {
       setJob((prev) => (prev ? { ...prev, isActive: newStatus } : null));
     } catch (error) {
       console.error(error);
-      alert("Failed to update job status");
+      setToast({
+        message: "Failed to update job status",
+        type: "error",
+      });
       setJobStatus(jobStatus); // Revert
     }
   };
@@ -673,7 +712,8 @@ export default function JobDetailPage() {
         <div
           className={`fixed left-1/2 -translate-x-1/2 z-50 transition-all duration-300 ${
             isClosing ? "animate-slide-up" : "animate-slide-down"
-          }`}>
+          }`}
+        >
           <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl shadow-lg p-4 flex items-center gap-3 pr-10 relative">
             <div className="p-2 bg-emerald-100 rounded-lg shrink-0">
               <CheckCircle2 className="w-5 h-5 text-emerald-600" />
@@ -692,7 +732,8 @@ export default function JobDetailPage() {
                   setIsClosing(false);
                 }, 300);
               }}
-              className="absolute top-2 right-2 p-1 hover:bg-emerald-100 rounded-lg text-emerald-600 transition-colors">
+              className="absolute top-2 right-2 p-1 hover:bg-emerald-100 rounded-lg text-emerald-600 transition-colors"
+            >
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -718,7 +759,8 @@ export default function JobDetailPage() {
             <div className="flex items-start gap-3 sm:gap-4">
               <button
                 onClick={() => router.back()}
-                className="mt-0.5 sm:mt-1 p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg text-slate-500 transition-colors">
+                className="mt-0.5 sm:mt-1 p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg text-slate-500 transition-colors"
+              >
                 <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
               <div className="flex-1 min-w-0">
@@ -748,12 +790,14 @@ export default function JobDetailPage() {
                   jobStatus === "Open"
                     ? "text-red-600 bg-white border-red-200 hover:bg-red-50"
                     : "text-emerald-600 bg-white border-emerald-200 hover:bg-emerald-50"
-                }`}>
+                }`}
+              >
                 {jobStatus === "Open" ? "Close Job" : "Reopen Job"}
               </button>
               <button
                 onClick={handleEditClick}
-                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-white bg-slate-900 rounded-lg hover:bg-slate-800 shadow-sm">
+                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-white bg-slate-900 rounded-lg hover:bg-slate-800 shadow-sm"
+              >
                 <Edit3 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 <span className="hidden sm:inline">Edit Job</span>
                 <span className="sm:hidden">Edit</span>
@@ -768,7 +812,8 @@ export default function JobDetailPage() {
         <div
           className={`flex-1 min-w-0 transition-all duration-300 ${
             selectedCandidate ? "mr-0 lg:mr-[400px]" : ""
-          }`}>
+          }`}
+        >
           {/* Job Summary Section */}
           <section className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8">
             <p className="text-xs sm:text-sm text-slate-600 mb-4 leading-relaxed whitespace-pre-wrap">
@@ -780,7 +825,8 @@ export default function JobDetailPage() {
                 {skills.slice(0, 4).map((skill, idx) => (
                   <span
                     key={idx}
-                    className="px-2 sm:px-2.5 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-md border border-gray-200">
+                    className="px-2 sm:px-2.5 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-md border border-gray-200"
+                  >
                     {skill}
                   </span>
                 ))}
@@ -831,7 +877,8 @@ export default function JobDetailPage() {
                       activeTab === tab
                         ? "bg-white text-slate-900 shadow-sm"
                         : "text-slate-500 hover:text-slate-700"
-                    }`}>
+                    }`}
+                  >
                     {tab}
                   </button>
                 ))}
@@ -880,7 +927,8 @@ export default function JobDetailPage() {
                     selectedCandidate?.id === candidate.id
                       ? "border-indigo-500 ring-1 ring-indigo-500 shadow-md"
                       : "border-gray-200 hover:border-indigo-200"
-                  }`}>
+                  }`}
+                >
                   <div className="flex items-start sm:items-center justify-between gap-2 sm:gap-4">
                     {/* Left: Info */}
                     <div className="flex items-start sm:items-center gap-3 sm:gap-4 flex-1 min-w-0">
@@ -926,7 +974,8 @@ export default function JobDetailPage() {
                           .map((skill, i) => (
                             <span
                               key={i}
-                              className="px-2 py-0.5 bg-gray-50 border border-gray-100 rounded text-xs text-gray-600">
+                              className="px-2 py-0.5 bg-gray-50 border border-gray-100 rounded text-xs text-gray-600"
+                            >
                               {skill}
                             </span>
                           ))}
@@ -966,7 +1015,8 @@ export default function JobDetailPage() {
               </div>
               <button
                 onClick={() => setSelectedCandidate(null)}
-                className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg shrink-0">
+                className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg shrink-0"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -979,13 +1029,15 @@ export default function JobDetailPage() {
                   href={selectedCandidate.resumeUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 border border-gray-200 rounded-lg text-xs sm:text-sm font-medium text-slate-700 hover:bg-gray-50">
+                  className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 border border-gray-200 rounded-lg text-xs sm:text-sm font-medium text-slate-700 hover:bg-gray-50"
+                >
                   <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   <span className="hidden sm:inline">View</span> Resume
                 </a>
                 <button
                   onClick={() => setShowInterviewModal(true)}
-                  className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 border border-gray-200 rounded-lg text-xs sm:text-sm font-medium text-slate-700 hover:bg-gray-50">
+                  className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 border border-gray-200 rounded-lg text-xs sm:text-sm font-medium text-slate-700 hover:bg-gray-50"
+                >
                   <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   Interview
                 </button>
@@ -994,7 +1046,8 @@ export default function JobDetailPage() {
                     setComparisonCandidate(null); // Reset selection
                     setShowComparisonModal(true);
                   }}
-                  className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 border border-gray-200 rounded-lg text-xs sm:text-sm font-medium text-slate-700 hover:bg-gray-50 col-span-2 sm:col-span-1">
+                  className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 border border-gray-200 rounded-lg text-xs sm:text-sm font-medium text-slate-700 hover:bg-gray-50 col-span-2 sm:col-span-1"
+                >
                   <ArrowRightLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   Compare
                 </button>
@@ -1046,7 +1099,8 @@ export default function JobDetailPage() {
                     selectedCandidate.skillsExtracted.map((skill, i) => (
                       <span
                         key={i}
-                        className="px-2 sm:px-3 py-0.5 sm:py-1 bg-white border border-gray-200 rounded-full text-[10px] sm:text-xs font-medium text-slate-600">
+                        className="px-2 sm:px-3 py-0.5 sm:py-1 bg-white border border-gray-200 rounded-full text-[10px] sm:text-xs font-medium text-slate-600"
+                      >
                         {skill}
                       </span>
                     ))
@@ -1069,7 +1123,8 @@ export default function JobDetailPage() {
                     selectedCandidate.status === "accepted"
                       ? "bg-emerald-50 text-emerald-700"
                       : "bg-red-50 text-red-700"
-                  }`}>
+                  }`}
+                >
                   {selectedCandidate.status === "accepted" ? (
                     <CheckCircle2 className="w-5 h-5" />
                   ) : (
@@ -1083,7 +1138,8 @@ export default function JobDetailPage() {
                   {selectedCandidate.status === "applied" && (
                     <button
                       onClick={() => handleShortlist(selectedCandidate)}
-                      className="w-full py-2 sm:py-2.5 rounded-lg border border-purple-200 bg-purple-50 text-purple-700 font-medium text-xs sm:text-sm hover:bg-purple-100 flex items-center justify-center gap-1.5 sm:gap-2 transition-colors">
+                      className="w-full py-2 sm:py-2.5 rounded-lg border border-purple-200 bg-purple-50 text-purple-700 font-medium text-xs sm:text-sm hover:bg-purple-100 flex items-center justify-center gap-1.5 sm:gap-2 transition-colors"
+                    >
                       <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Shortlist
                     </button>
                   )}
@@ -1094,7 +1150,8 @@ export default function JobDetailPage() {
                   ) && (
                     <button
                       onClick={() => handleScheduleInterview(selectedCandidate)}
-                      className="w-full py-2 sm:py-2.5 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 font-medium text-xs sm:text-sm hover:bg-blue-100 flex items-center justify-center gap-1.5 sm:gap-2 transition-colors">
+                      className="w-full py-2 sm:py-2.5 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 font-medium text-xs sm:text-sm hover:bg-blue-100 flex items-center justify-center gap-1.5 sm:gap-2 transition-colors"
+                    >
                       <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />{" "}
                       Schedule Interview
                     </button>
@@ -1107,14 +1164,16 @@ export default function JobDetailPage() {
                         onClick={() =>
                           handleDecision("reject", selectedCandidate)
                         }
-                        className="w-full py-2 sm:py-2.5 rounded-lg border border-red-100 text-red-600 font-medium text-xs sm:text-sm hover:bg-red-50 flex items-center justify-center gap-1.5 sm:gap-2">
+                        className="w-full py-2 sm:py-2.5 rounded-lg border border-red-100 text-red-600 font-medium text-xs sm:text-sm hover:bg-red-50 flex items-center justify-center gap-1.5 sm:gap-2"
+                      >
                         <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Reject
                       </button>
                       <button
                         onClick={() =>
                           handleDecision("accept", selectedCandidate)
                         }
-                        className="w-full py-2 sm:py-2.5 rounded-lg bg-slate-900 text-white font-medium text-xs sm:text-sm hover:bg-slate-800 flex items-center justify-center gap-1.5 sm:gap-2 shadow-sm">
+                        className="w-full py-2 sm:py-2.5 rounded-lg bg-slate-900 text-white font-medium text-xs sm:text-sm hover:bg-slate-800 flex items-center justify-center gap-1.5 sm:gap-2 shadow-sm"
+                      >
                         <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />{" "}
                         Accept
                       </button>
@@ -1129,7 +1188,8 @@ export default function JobDetailPage() {
                       onClick={() =>
                         handleDecision("reject", selectedCandidate)
                       }
-                      className="w-full py-2 sm:py-2.5 rounded-lg border border-red-100 text-red-600 font-medium text-xs sm:text-sm hover:bg-red-50 flex items-center justify-center gap-1.5 sm:gap-2">
+                      className="w-full py-2 sm:py-2.5 rounded-lg border border-red-100 text-red-600 font-medium text-xs sm:text-sm hover:bg-red-50 flex items-center justify-center gap-1.5 sm:gap-2"
+                    >
                       <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Reject
                     </button>
                   )}
@@ -1164,7 +1224,8 @@ export default function JobDetailPage() {
               </h3>
               <button
                 onClick={closeEmailModal}
-                className="p-1.5 hover:bg-gray-200 rounded-lg">
+                className="p-1.5 hover:bg-gray-200 rounded-lg"
+              >
                 <X className="w-5 h-5 text-gray-400 hover:text-gray-600" />
               </button>
             </div>
@@ -1232,7 +1293,8 @@ export default function JobDetailPage() {
                         {interviewSlots.map((slot, index) => (
                           <div
                             key={index}
-                            className="flex gap-2 items-start p-3 bg-slate-50 rounded-lg border border-slate-200">
+                            className="flex gap-2 items-start p-3 bg-slate-50 rounded-lg border border-slate-200"
+                          >
                             <div className="flex-1 grid grid-cols-2 gap-2">
                               <div>
                                 <input
@@ -1268,7 +1330,8 @@ export default function JobDetailPage() {
                               <button
                                 type="button"
                                 onClick={() => removeInterviewSlot(index)}
-                                className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                                className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                              >
                                 <X className="w-4 h-4" />
                               </button>
                             )}
@@ -1279,7 +1342,8 @@ export default function JobDetailPage() {
                       <button
                         type="button"
                         onClick={addInterviewSlot}
-                        className="mt-2 w-full py-2 text-sm font-medium text-slate-600 hover:text-slate-900 border-2 border-dashed border-slate-300 hover:border-slate-400 rounded-lg transition-colors flex items-center justify-center gap-2">
+                        className="mt-2 w-full py-2 text-sm font-medium text-slate-600 hover:text-slate-900 border-2 border-dashed border-slate-300 hover:border-slate-400 rounded-lg transition-colors flex items-center justify-center gap-2"
+                      >
                         <Calendar className="w-4 h-4" />
                         Add Another Time Option
                       </button>
@@ -1342,7 +1406,8 @@ export default function JobDetailPage() {
             <div className="px-4 sm:px-6 py-3 sm:py-4 bg-gray-50 border-t border-gray-100 flex gap-2 sm:gap-3 shrink-0">
               <button
                 onClick={closeEmailModal}
-                className="flex-1 sm:flex-initial px-4 py-2 text-sm font-medium text-slate-600 hover:bg-gray-100 rounded-lg">
+                className="flex-1 sm:flex-initial px-4 py-2 text-sm font-medium text-slate-600 hover:bg-gray-100 rounded-lg"
+              >
                 Cancel
               </button>
               <button
@@ -1380,15 +1445,21 @@ export default function JobDetailPage() {
                       );
 
                       if (validSlots.length === 0) {
-                        alert(
-                          "Please provide at least one interview date and time option",
-                        );
+                        setToast({
+                          message:
+                            "Please provide at least one interview date and time option",
+                          type: "warning",
+                        });
                         setSendingEmail(false);
                         return;
                       }
 
                       if (!locationInput.value) {
-                        alert("Please fill in the interview location or link");
+                        setToast({
+                          message:
+                            "Please fill in the interview location or link",
+                          type: "warning",
+                        });
                         setSendingEmail(false);
                         return;
                       }
@@ -1491,11 +1562,17 @@ export default function JobDetailPage() {
                       closeEmailModal();
                       setShowSuccessModal(true);
                     } else {
-                      alert("Failed to send email");
+                      setToast({
+                        message: "Failed to send email",
+                        type: "error",
+                      });
                     }
                   } catch (error) {
                     console.error("Error sending email:", error);
-                    alert("Error sending email");
+                    setToast({
+                      message: "Error sending email",
+                      type: "error",
+                    });
                   } finally {
                     setSendingEmail(false);
                   }
@@ -1508,7 +1585,8 @@ export default function JobDetailPage() {
                   emailModal.type === "accept"
                     ? "bg-black hover:bg-slate-800"
                     : "bg-red-600 hover:bg-red-700"
-                }`}>
+                }`}
+              >
                 {sendingEmail ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -1543,7 +1621,8 @@ export default function JobDetailPage() {
               </div>
               <button
                 onClick={() => setShowInterviewModal(false)}
-                className="p-1.5 hover:bg-gray-200 rounded-lg">
+                className="p-1.5 hover:bg-gray-200 rounded-lg"
+              >
                 <X className="w-5 h-5 text-gray-400 hover:text-gray-600" />
               </button>
             </div>
@@ -1592,7 +1671,8 @@ export default function JobDetailPage() {
                     {interviewSlots.map((slot, index) => (
                       <div
                         key={index}
-                        className="flex gap-2 items-start p-3 bg-slate-50 rounded-lg border border-slate-200">
+                        className="flex gap-2 items-start p-3 bg-slate-50 rounded-lg border border-slate-200"
+                      >
                         <div className="flex-1 grid grid-cols-2 gap-2">
                           <div>
                             <input
@@ -1628,7 +1708,8 @@ export default function JobDetailPage() {
                           <button
                             type="button"
                             onClick={() => removeInterviewSlot(index)}
-                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                          >
                             <X className="w-4 h-4" />
                           </button>
                         )}
@@ -1639,7 +1720,8 @@ export default function JobDetailPage() {
                   <button
                     type="button"
                     onClick={addInterviewSlot}
-                    className="mt-2 w-full py-2 text-sm font-medium text-slate-600 hover:text-slate-900 border-2 border-dashed border-slate-300 hover:border-slate-400 rounded-lg transition-colors flex items-center justify-center gap-2">
+                    className="mt-2 w-full py-2 text-sm font-medium text-slate-600 hover:text-slate-900 border-2 border-dashed border-slate-300 hover:border-slate-400 rounded-lg transition-colors flex items-center justify-center gap-2"
+                  >
                     <Calendar className="w-4 h-4" />
                     Add Another Time Option
                   </button>
@@ -1691,7 +1773,8 @@ export default function JobDetailPage() {
             <div className="px-4 sm:px-6 py-3 sm:py-4 bg-gray-50 border-t border-gray-100 flex gap-2 sm:gap-3 shrink-0">
               <button
                 onClick={() => setShowInterviewModal(false)}
-                className="flex-1 sm:flex-initial px-4 py-2 text-sm font-medium text-slate-600 hover:bg-gray-100 rounded-lg">
+                className="flex-1 sm:flex-initial px-4 py-2 text-sm font-medium text-slate-600 hover:bg-gray-100 rounded-lg"
+              >
                 Cancel
               </button>
               <button
@@ -1722,15 +1805,21 @@ export default function JobDetailPage() {
                     );
 
                     if (validSlots.length === 0) {
-                      alert(
-                        "Please provide at least one interview date and time option",
-                      );
+                      setToast({
+                        message:
+                          "Please provide at least one interview date and time option",
+                        type: "warning",
+                      });
                       setSendingEmail(false);
                       return;
                     }
 
                     if (!locationInput.value) {
-                      alert("Please fill in the interview location or link");
+                      setToast({
+                        message:
+                          "Please fill in the interview location or link",
+                        type: "warning",
+                      });
                       setSendingEmail(false);
                       return;
                     }
@@ -1814,18 +1903,25 @@ export default function JobDetailPage() {
                       setShowInterviewModal(false);
                       setShowSuccessModal(true);
                     } else {
-                      alert("Failed to send interview invitation");
+                      setToast({
+                        message: "Failed to send interview invitation",
+                        type: "error",
+                      });
                     }
                   } catch (error) {
                     console.error("Error sending interview invitation:", error);
-                    alert("Error sending interview invitation");
+                    setToast({
+                      message: "Error sending interview invitation",
+                      type: "error",
+                    });
                   } finally {
                     setSendingEmail(false);
                   }
                 }}
                 className={`flex-1 sm:flex-initial px-4 py-2 text-sm font-medium text-white rounded-lg shadow-sm flex items-center justify-center gap-2 bg-black hover:bg-slate-800 ${
                   sendingEmail ? "opacity-70 cursor-not-allowed" : ""
-                }`}>
+                }`}
+              >
                 {sendingEmail ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -1853,14 +1949,16 @@ export default function JobDetailPage() {
               <h3 className="text-lg font-bold text-slate-900">Edit Job</h3>
               <button
                 onClick={() => setShowEditModal(false)}
-                className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-600 transition-colors">
+                className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-600 transition-colors"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <form
               onSubmit={handleUpdateJob}
-              className="flex-1 overflow-y-auto p-6 space-y-4">
+              className="flex-1 overflow-y-auto p-6 space-y-4"
+            >
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 mb-1">
@@ -1959,17 +2057,39 @@ export default function JobDetailPage() {
               <button
                 type="button"
                 onClick={() => setShowEditModal(false)}
-                className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-gray-200 rounded-lg transition-colors">
+                className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-gray-200 rounded-lg transition-colors"
+              >
                 Cancel
               </button>
               <button
                 onClick={handleUpdateJob}
-                className="px-4 py-2 text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 rounded-lg transition-colors shadow-sm">
+                className="px-4 py-2 text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 rounded-lg transition-colors shadow-sm"
+              >
                 Save Changes
               </button>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+
+      {/* Confirm Dialog */}
+      {confirmDialog && (
+        <ConfirmDialog
+          title={confirmDialog.title}
+          message={confirmDialog.message}
+          type={confirmDialog.type}
+          onConfirm={confirmDialog.onConfirm}
+          onCancel={() => setConfirmDialog(null)}
+        />
       )}
     </div>
   );

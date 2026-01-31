@@ -236,18 +236,36 @@ export default function CandidateDashboard() {
         </div>
 
         {/* Filters */}
-        <div className="mb-6 p-4 bg-white rounded-2xl border border-gray-100">
-          <h3 className="text-sm font-semibold text-gray-700 mb-3">Filters</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="mb-6 p-4 sm:p-5 bg-white rounded-2xl border border-gray-100 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-base font-semibold text-gray-900">Filters</h3>
+            {(selectedJobType !== "all" ||
+              selectedLocation !== "all" ||
+              minSalary ||
+              maxSalary) && (
+              <button
+                onClick={() => {
+                  setSelectedJobType("all");
+                  setSelectedLocation("all");
+                  setMinSalary("");
+                  setMaxSalary("");
+                }}
+                className="text-xs text-blue-600 hover:text-blue-700 font-medium transition-colors"
+              >
+                Clear all
+              </button>
+            )}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {/* Job Type Filter */}
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-2">
+              <label className="block text-xs font-semibold text-gray-700 mb-2">
                 Job Type
               </label>
               <select
                 value={selectedJobType}
                 onChange={(e) => setSelectedJobType(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all cursor-pointer hover:border-gray-400"
               >
                 <option value="all">All Types</option>
                 <option value="Remote">Remote</option>
@@ -258,13 +276,13 @@ export default function CandidateDashboard() {
 
             {/* Location Filter */}
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-2">
+              <label className="block text-xs font-semibold text-gray-700 mb-2">
                 Location
               </label>
               <select
                 value={selectedLocation}
                 onChange={(e) => setSelectedLocation(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all cursor-pointer hover:border-gray-400"
               >
                 <option value="all">All Locations</option>
                 {locations.map((location) => (
@@ -277,50 +295,46 @@ export default function CandidateDashboard() {
 
             {/* Min Salary Filter */}
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-2">
+              <label className="block text-xs font-semibold text-gray-700 mb-2">
                 Min Salary (IDR)
               </label>
               <input
                 type="number"
-                placeholder="e.g. 5000000"
+                min="0"
+                step="100000"
+                placeholder="e.g. 5,000,000"
                 value={minSalary}
-                onChange={(e) => setMinSalary(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === "" || parseInt(value) >= 0) {
+                    setMinSalary(value);
+                  }
+                }}
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-700 placeholder-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all hover:border-gray-400"
               />
             </div>
 
             {/* Max Salary Filter */}
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-2">
+              <label className="block text-xs font-semibold text-gray-700 mb-2">
                 Max Salary (IDR)
               </label>
               <input
                 type="number"
-                placeholder="e.g. 15000000"
+                min="0"
+                step="100000"
+                placeholder="e.g. 15,000,000"
                 value={maxSalary}
-                onChange={(e) => setMaxSalary(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === "" || parseInt(value) >= 0) {
+                    setMaxSalary(value);
+                  }
+                }}
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-700 placeholder-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all hover:border-gray-400"
               />
             </div>
           </div>
-
-          {/* Clear Filters Button */}
-          {(selectedJobType !== "all" ||
-            selectedLocation !== "all" ||
-            minSalary ||
-            maxSalary) && (
-            <button
-              onClick={() => {
-                setSelectedJobType("all");
-                setSelectedLocation("all");
-                setMinSalary("");
-                setMaxSalary("");
-              }}
-              className="mt-3 text-sm text-blue-600 hover:text-blue-700 font-medium"
-            >
-              Clear all filters
-            </button>
-          )}
         </div>
 
         {/* Recruiter Access Banner */}
