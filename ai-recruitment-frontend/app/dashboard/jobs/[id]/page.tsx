@@ -581,7 +581,7 @@ export default function JobDetailPage() {
     e.preventDefault();
     setLoading(true); // Re-use loading or create saving state
     try {
-      const res = await fetch(`http://localhost:3000/jobs/${jobId}`, {
+      const res = await fetch(`${API_URL}/jobs/${jobId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(editFormData),
@@ -639,7 +639,7 @@ export default function JobDetailPage() {
 
   const fetchJob = useCallback(async () => {
     try {
-      const res = await fetch(`http://localhost:3000/jobs/${jobId}`);
+      const res = await fetch(`${API_URL}/jobs/${jobId}`);
       if (!res.ok) throw new Error("Job not found");
       const data: ApiJob = await res.json();
       setJob(data);
@@ -835,7 +835,7 @@ export default function JobDetailPage() {
     setJobStatus(newStatus ? "Open" : "Closed");
 
     try {
-      const res = await fetch(`http://localhost:3000/jobs/${jobId}`, {
+      const res = await fetch(`${API_URL}/jobs/${jobId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isActive: newStatus }),

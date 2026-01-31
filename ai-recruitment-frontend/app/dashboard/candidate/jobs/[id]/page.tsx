@@ -1,6 +1,7 @@
 "use client";
 
 import AccountDropdown from "@/components/AccountDropdown";
+import { API_URL } from "@/lib/config";
 import {
   ArrowLeft,
   Briefcase,
@@ -111,7 +112,7 @@ export default function CandidateJobDetailPage() {
   // Fetch job data
   const fetchJob = useCallback(async () => {
     try {
-      const res = await fetch(`http://localhost:3000/jobs/${jobId}`);
+      const res = await fetch(`${API_URL}/jobs/${jobId}`);
       if (!res.ok) throw new Error("Job not found");
       const data: ApiJob = await res.json();
       setJob(data);
@@ -442,7 +443,7 @@ function ApplyModal({
       formData.append("email", form.email);
       formData.append("resume", file);
 
-      const res = await fetch("http://localhost:3000/applications", {
+      const res = await fetch(`${API_URL}/applications`, {
         method: "POST",
         body: formData,
       });
