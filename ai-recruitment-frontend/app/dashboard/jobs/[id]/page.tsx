@@ -15,6 +15,7 @@ import {
   Edit3,
   FileText,
   Filter,
+  Gift,
   Loader2,
   Mail,
   Search,
@@ -72,16 +73,130 @@ function getPostedAgo(dateString: string): string {
   return `${diffWeeks}w ago`;
 }
 
-// Parse requirements string to skills array
+// Parse requirements string to extract clean tech keywords
 function parseSkills(requirements: string): string[] {
-  return requirements
-    .split(/[,\n•\-]+/)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0 && s.length < 30)
-    .slice(0, 5);
+  // Extract tech keywords and tools using regex patterns
+  const techPatterns = [
+    // Programming languages
+    /\b(JavaScript|TypeScript|Python|Java|Go|Rust|C\+\+|C#|PHP|Ruby|Swift|Kotlin|Scala)\b/gi,
+    // Frameworks & Libraries
+    /\b(React|Vue|Angular|Next\.js|Node\.js|Express|NestJS|Django|FastAPI|Flask|Spring|Laravel)\b/gi,
+    // Databases
+    /\b(PostgreSQL|MySQL|MongoDB|Redis|Cassandra|DynamoDB|Elasticsearch)\b/gi,
+    // Cloud & DevOps
+    /\b(AWS|Azure|GCP|Docker|Kubernetes|Terraform|Jenkins|GitLab|CircleCI)\b/gi,
+    // Tools & Technologies
+    /\b(Git|GraphQL|REST API|gRPC|Kafka|RabbitMQ|Nginx|Apache)\b/gi,
+  ];
+
+  const skills = new Set<string>();
+  const skillMap = new Map<string, string>(); // lowercase -> original case
+
+  techPatterns.forEach((pattern) => {
+    const matches = requirements.match(pattern);
+    if (matches) {
+      matches.forEach((match) => {
+        const lower = match.toLowerCase();
+        // Keep the first occurrence's casing
+        if (!skillMap.has(lower)) {
+          skillMap.set(lower, match);
+        }
+      });
+    }
+  });
+
+  // Add deduplicated skills with proper casing
+  skillMap.forEach((value) => skills.add(value));
+
+  // If no tech keywords found, fall back to simple parsing
+  if (skills.size === 0) {
+    return requirements
+      .split(/[,\n•\-]+/)
+      .map((s) => s.trim())
+      .filter(
+        (s) =>
+          s.length > 2 &&
+          s.length < 25 &&
+          !s.match(
+            /^(years?|experience|strong|knowledge|proficiency|understanding|familiarity|ability|skills?|with)$/i,
+          ),
+      )
+      .slice(0, 6);
+  }
+
+  return Array.from(skills);
+}
+
+// Get preview skills (first 4)
+function getPreviewSkills(requirements: string): string[] {
+  return parseSkills(requirements).slice(0, 4);
 }
 
 // --- Components ---
+const ProgressTracker = ({ status }: { status: string }) => {
+  const steps = [
+    { key: "applied", label: "Applied", Icon: FileText },
+    { key: "shortlisted", label: "Shortlisted", Icon: Star },
+    { key: "interview_scheduled", label: "Interview", Icon: Calendar },
+    { key: "accepted", label: "Offer", Icon: Gift },
+  ];
+
+  const currentIndex = steps.findIndex((s) => s.key === status);
+  const isRejected = status === "rejected";
+
+  return (
+    <div className="flex items-center justify-around py-2">
+      {steps.map((step, index) => {
+        const isActive = index <= currentIndex && !isRejected;
+        const isCurrent = index === currentIndex && !isRejected;
+        const StepIcon = step.Icon;
+
+        return (
+          <div key={step.key} className="flex flex-col items-center">
+            {/* Icon Circle */}
+            <div
+              className={`w-12 h-12 rounded-full flex items-center justify-center transition-all mb-2 ${
+                isRejected
+                  ? "bg-gray-200"
+                  : isCurrent
+                    ? "bg-blue-500 shadow-lg"
+                    : isActive
+                      ? "bg-blue-100"
+                      : "bg-gray-200"
+              }`}
+            >
+              <StepIcon
+                className={`w-5 h-5 ${
+                  isRejected || !isActive
+                    ? "text-gray-400"
+                    : isCurrent
+                      ? "text-white"
+                      : "text-blue-600"
+                }`}
+              />
+            </div>
+
+            {/* Label */}
+            <span
+              className={`text-xs font-medium text-center ${
+                isRejected
+                  ? "text-gray-400"
+                  : isCurrent
+                    ? "text-blue-600"
+                    : isActive
+                      ? "text-gray-600"
+                      : "text-gray-400"
+              }`}
+            >
+              {step.label}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 const StatusBadge = ({ status }: { status: string }) => {
   const styles: Record<string, string> = {
     Open: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
@@ -128,31 +243,36 @@ const MatchScore = ({ score }: { score: number }) => {
 const ComparisonModal = ({
   isOpen,
   onClose,
-  candidate1,
-  candidate2,
+  comparedCandidates,
   candidates,
-  onSelectCandidate2,
+  onAddCandidate,
+  onRemoveCandidate,
 }: {
   isOpen: boolean;
   onClose: () => void;
-  candidate1: Application;
-  candidate2: Application | null;
+  comparedCandidates: Application[];
   candidates: Application[];
-  onSelectCandidate2: (app: Application) => void;
+  onAddCandidate: (app: Application) => void;
+  onRemoveCandidate: (id: string) => void;
 }) => {
-  if (!isOpen) return null;
+  if (!isOpen || comparedCandidates.length === 0) return null;
 
-  // Filter out candidate1 from the list
-  const availableCandidates = candidates.filter((c) => c.id !== candidate1.id);
+  // Filter out already selected candidates
+  const selectedIds = comparedCandidates.map((c) => c.id);
+  const availableCandidates = candidates.filter(
+    (c) => !selectedIds.includes(c.id),
+  );
+  const canAddMore = comparedCandidates.length < 3;
+  const baseline = comparedCandidates[0];
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-7xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50 flex-shrink-0">
           <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
             <ArrowRightLeft className="w-5 h-5 text-indigo-600" />
-            Compare Candidates
+            Compare Candidates ({comparedCandidates.length}/3)
           </h2>
           <button
             onClick={onClose}
@@ -163,233 +283,210 @@ const ComparisonModal = ({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto md:overflow-hidden bg-gray-50/30">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:h-full p-4 sm:p-6">
-            {/* Candidate 1 (Baselines) */}
-            <div className="bg-white rounded-xl border-2 border-indigo-100 shadow-sm overflow-hidden flex flex-col md:h-full h-auto">
-              <div className="bg-indigo-50/50 p-4 border-b border-indigo-100 flex-shrink-0">
-                <span className="text-xs font-bold text-indigo-600 uppercase tracking-wider bg-white px-2 py-0.5 rounded-md border border-indigo-100 inline-block mb-2">
-                  Baseline
-                </span>
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-white border border-indigo-100 flex-shrink-0 flex items-center justify-center font-bold text-indigo-700 text-lg shadow-sm">
-                    {candidate1.candidateName.charAt(0)}
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-900 text-lg">
-                      {candidate1.candidateName}
-                    </h3>
-                    <p className="text-sm text-slate-500">{candidate1.email}</p>
-                  </div>
-                  <div className="ml-auto">
-                    <StatusBadge status={candidate1.status} />
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-5 space-y-6 md:flex-1 md:overflow-y-auto overflow-visible">
-                {/* Match Score */}
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-purple-500" /> AI Match
-                    Score
-                  </h4>
-                  <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
-                    <div className="flex items-end gap-2 mb-2">
-                      <span className="text-3xl font-bold text-slate-900">
-                        {candidate1.matchScore}%
+        <div className="flex-1 overflow-y-auto bg-gray-50/30">
+          <div
+            className={`grid grid-cols-1 ${comparedCandidates.length === 2 ? "md:grid-cols-2" : comparedCandidates.length === 3 ? "md:grid-cols-3" : ""} gap-4 p-4`}
+          >
+            {/* Map through all compared candidates */}
+            {comparedCandidates.map((candidate, index) => (
+              <div
+                key={candidate.id}
+                className={`bg-white rounded-xl shadow-sm overflow-hidden flex flex-col ${
+                  index === 0
+                    ? "border-2 border-indigo-100"
+                    : "border border-gray-200"
+                }`}
+              >
+                {/* Header */}
+                <div
+                  className={`p-4 border-b flex items-center justify-between flex-shrink-0 ${
+                    index === 0
+                      ? "bg-indigo-50/50 border-indigo-100"
+                      : "bg-gray-50/50 border-gray-200"
+                  }`}
+                >
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    {index === 0 && (
+                      <span className="text-xs font-bold text-indigo-600 uppercase tracking-wider bg-white px-2 py-0.5 rounded-md border border-indigo-100 flex-shrink-0">
+                        Baseline
                       </span>
+                    )}
+                    <div
+                      className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-sm shadow-sm ${
+                        index === 0
+                          ? "bg-white border border-indigo-100 text-indigo-700"
+                          : "bg-slate-800 text-white"
+                      }`}
+                    >
+                      {candidate.candidateName.charAt(0)}
                     </div>
-                    <MatchScore score={candidate1.matchScore || 0} />
-                    <p className="text-xs text-gray-600 mt-2 leading-relaxed">
-                      {candidate1.matchExplanation ||
-                        "No explanation available."}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Skills */}
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                    <Briefcase className="w-4 h-4 text-blue-500" /> Skills
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {candidate1.skillsExtracted.map((skill, i) => (
-                      <span
-                        key={i}
-                        className="px-2.5 py-1 bg-white border border-gray-200 rounded-md text-xs font-medium text-slate-600 shadow-sm"
-                      >
-                        {skill}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Summary */}
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-amber-500" /> Summary
-                  </h4>
-                  <p className="text-sm text-slate-600 leading-relaxed bg-amber-50/50 p-3 rounded-lg border border-amber-100/50">
-                    {candidate1.summary || "No summary available."}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Candidate 2 (Comparison) */}
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col md:h-full h-auto relative">
-              {!candidate2 ? (
-                <div className="md:absolute md:inset-0 relative h-[60vh] md:h-auto flex flex-col items-center justify-center bg-gray-50/50 p-6 text-center z-10 transition-all">
-                  <div className="w-16 h-16 bg-white rounded-full border border-gray-200 flex items-center justify-center mb-4 shadow-sm">
-                    <Users className="w-8 h-8 text-gray-300" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-slate-900 mb-2">
-                    Select a Candidate to Compare
-                  </h3>
-                  <p className="text-sm text-slate-500 max-w-xs mb-6">
-                    Choose another candidate from the list below to see a
-                    side-by-side comparison.
-                  </p>
-
-                  <div className="w-full max-w-sm max-h-60 overflow-y-auto bg-white rounded-xl border border-gray-200 shadow-sm">
-                    {availableCandidates.map((c) => (
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-slate-900 text-sm truncate">
+                        {candidate.candidateName}
+                      </h3>
+                      <p className="text-xs text-slate-500 truncate">
+                        {candidate.email}
+                      </p>
+                    </div>
+                    {index > 0 && (
                       <button
-                        key={c.id}
-                        onClick={() => onSelectCandidate2(c)} // Select candidate
-                        className="w-full text-left px-4 py-3 border-b last:border-0 border-gray-100 hover:bg-indigo-50 transition-colors flex items-center gap-3"
+                        onClick={() => onRemoveCandidate(candidate.id)}
+                        className="p-1 hover:bg-red-50 rounded text-red-500 transition-colors flex-shrink-0"
+                        title="Remove"
                       >
-                        <div className="w-8 h-8 rounded-full bg-slate-100 flex-shrink-0 flex items-center justify-center text-xs font-bold text-slate-600">
-                          {c.candidateName.charAt(0)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-slate-900 truncate">
-                            {c.candidateName}
-                          </p>
-                          <p className="text-xs text-slate-500 truncate">
-                            {c.matchScore}% Match • {c.status}
-                          </p>
-                        </div>
-                        <ChevronRight className="w-4 h-4 text-gray-300" />
+                        <X className="w-4 h-4" />
                       </button>
-                    ))}
-                    {availableCandidates.length === 0 && (
-                      <div className="p-4 text-center text-sm text-gray-400">
-                        No other candidates available.
-                      </div>
                     )}
                   </div>
                 </div>
-              ) : (
-                <>
-                  <div className="bg-gray-50/50 p-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-full bg-slate-800 flex-shrink-0 flex items-center justify-center font-bold text-white text-lg shadow-sm">
-                        {candidate2.candidateName.charAt(0)}
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-slate-900 text-lg">
-                          {candidate2.candidateName}
-                        </h3>
-                        <button
-                          onClick={() => onSelectCandidate2(null as any)}
-                          className="text-xs text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1"
-                        >
-                          Change <ArrowUpDown className="w-3 h-3" />
-                        </button>
-                      </div>
-                    </div>
-                    <StatusBadge status={candidate2.status} />
-                  </div>
 
-                  <div className="p-5 space-y-6 md:flex-1 md:overflow-y-auto overflow-visible">
-                    {/* Match Score */}
-                    <div>
-                      <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                        <Sparkles className="w-4 h-4 text-purple-500" /> AI
-                        Match Score
-                      </h4>
-                      <div
-                        className={`p-3 rounded-lg border ${
-                          (candidate2.matchScore || 0) >
-                          (candidate1.matchScore || 0)
-                            ? "bg-emerald-50 border-emerald-100"
-                            : (candidate2.matchScore || 0) <
-                                (candidate1.matchScore || 0)
-                              ? "bg-red-50 border-red-100"
-                              : "bg-gray-50 border-gray-200"
-                        }`}
-                      >
-                        <div className="flex items-end gap-2 mb-2">
-                          <span
-                            className={`text-3xl font-bold ${
-                              (candidate2.matchScore || 0) >
-                              (candidate1.matchScore || 0)
-                                ? "text-emerald-700"
-                                : (candidate2.matchScore || 0) <
-                                    (candidate1.matchScore || 0)
-                                  ? "text-red-700"
-                                  : "text-slate-900"
-                            }`}
-                          >
-                            {candidate2.matchScore}%
-                          </span>
-                          {candidate2.matchScore && candidate1.matchScore && (
-                            <span className="text-xs font-medium mb-1.5 px-2 py-0.5 rounded-full bg-white/50 border border-black/5">
-                              {candidate2.matchScore > candidate1.matchScore
-                                ? `+${candidate2.matchScore - candidate1.matchScore}%`
-                                : candidate2.matchScore < candidate1.matchScore
-                                  ? `-${candidate1.matchScore - candidate2.matchScore}%`
+                <div className="p-4 space-y-4 flex-1 overflow-y-auto">
+                  {/* Match Score */}
+                  <div>
+                    <h4 className="text-xs font-semibold text-gray-900 mb-2 flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-purple-500" /> AI
+                      Match
+                    </h4>
+                    <div
+                      className={`p-3 rounded-lg border ${
+                        index > 0 &&
+                        (candidate.matchScore || 0) > (baseline.matchScore || 0)
+                          ? "bg-emerald-50 border-emerald-100"
+                          : index > 0 &&
+                              (candidate.matchScore || 0) <
+                                (baseline.matchScore || 0)
+                            ? "bg-red-50 border-red-100"
+                            : "bg-gray-50 border-gray-100"
+                      }`}
+                    >
+                      <div className="flex items-end gap-2 mb-1.5">
+                        <span
+                          className={`text-2xl font-bold ${
+                            index > 0 &&
+                            (candidate.matchScore || 0) >
+                              (baseline.matchScore || 0)
+                              ? "text-emerald-700"
+                              : index > 0 &&
+                                  (candidate.matchScore || 0) <
+                                    (baseline.matchScore || 0)
+                                ? "text-red-700"
+                                : "text-slate-900"
+                          }`}
+                        >
+                          {candidate.matchScore}%
+                        </span>
+                        {index > 0 &&
+                          candidate.matchScore &&
+                          baseline.matchScore && (
+                            <span className="text-xs font-medium mb-1 px-1.5 py-0.5 rounded-full bg-white/50 border border-black/5">
+                              {candidate.matchScore > baseline.matchScore
+                                ? `+${candidate.matchScore - baseline.matchScore}%`
+                                : candidate.matchScore < baseline.matchScore
+                                  ? `-${baseline.matchScore - candidate.matchScore}%`
                                   : "Same"}
                             </span>
                           )}
-                        </div>
-                        <MatchScore score={candidate2.matchScore || 0} />
-                        <p className="text-xs text-gray-600 mt-2 leading-relaxed">
-                          {candidate2.matchExplanation ||
-                            "No explanation available."}
-                        </p>
                       </div>
-                    </div>
-
-                    {/* Skills */}
-                    <div>
-                      <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                        <Briefcase className="w-4 h-4 text-blue-500" /> Skills
-                      </h4>
-                      <div className="flex flex-wrap gap-2">
-                        {candidate2.skillsExtracted.map((skill, i) => {
-                          const isShared =
-                            candidate1.skillsExtracted.includes(skill);
-                          return (
-                            <span
-                              key={i}
-                              className={`px-2.5 py-1 border rounded-md text-xs font-medium shadow-sm transition-colors ${
-                                isShared
-                                  ? "bg-indigo-50 border-indigo-200 text-indigo-700"
-                                  : "bg-white border-gray-200 text-slate-600"
-                              }`}
-                            >
-                              {skill} {isShared && "✨"}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Summary */}
-                    <div>
-                      <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-amber-500" /> Summary
-                      </h4>
-                      <p className="text-sm text-slate-600 leading-relaxed bg-amber-50/50 p-3 rounded-lg border border-amber-100/50">
-                        {candidate2.summary || "No summary available."}
+                      <p className="text-xs text-gray-600 leading-relaxed line-clamp-2">
+                        {candidate.matchExplanation ||
+                          "No explanation available."}
                       </p>
                     </div>
                   </div>
-                </>
-              )}
-            </div>
+
+                  {/* Skills */}
+                  <div>
+                    <h4 className="text-xs font-semibold text-gray-900 mb-2 flex items-center gap-1.5">
+                      <Briefcase className="w-3.5 h-3.5 text-blue-500" /> Skills
+                    </h4>
+                    <div className="flex flex-wrap gap-1.5">
+                      {candidate.skillsExtracted.slice(0, 6).map((skill, i) => {
+                        const isShared =
+                          index > 0 && baseline.skillsExtracted.includes(skill);
+                        return (
+                          <span
+                            key={i}
+                            className={`px-2 py-0.5 border rounded-md text-xs font-medium shadow-sm ${
+                              isShared
+                                ? "bg-indigo-50 border-indigo-200 text-indigo-700"
+                                : "bg-white border-gray-200 text-slate-600"
+                            }`}
+                          >
+                            {skill} {isShared && "✨"}
+                          </span>
+                        );
+                      })}
+                      {candidate.skillsExtracted.length > 6 && (
+                        <span className="text-xs text-gray-400 px-2">
+                          +{candidate.skillsExtracted.length - 6}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Summary */}
+                  <div>
+                    <h4 className="text-xs font-semibold text-gray-900 mb-2 flex items-center gap-1.5">
+                      <FileText className="w-3.5 h-3.5 text-amber-500" />{" "}
+                      Summary
+                    </h4>
+                    <p className="text-xs text-slate-600 leading-relaxed bg-amber-50/50 p-2.5 rounded-lg border border-amber-100/50 line-clamp-3">
+                      {candidate.summary || "No summary available."}
+                    </p>
+                  </div>
+
+                  {/* Status */}
+                  <div>
+                    <h4 className="text-xs font-semibold text-gray-900 mb-2">
+                      Status
+                    </h4>
+                    <StatusBadge status={candidate.status} />
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {/* Add More Candidate Slot */}
+            {canAddMore && availableCandidates.length > 0 && (
+              <div className="bg-white rounded-xl border-2 border-dashed border-gray-300 shadow-sm overflow-hidden flex flex-col">
+                <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+                  <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-3">
+                    <Users className="w-6 h-6 text-gray-400" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-slate-900 mb-2">
+                    Add Another Candidate
+                  </h3>
+                  <p className="text-xs text-slate-500 mb-4 max-w-xs">
+                    Select up to {3 - comparedCandidates.length} more{" "}
+                    {3 - comparedCandidates.length === 1
+                      ? "candidate"
+                      : "candidates"}
+                  </p>
+                  <div className="w-full max-h-64 overflow-y-auto bg-gray-50 rounded-lg border border-gray-200">
+                    {availableCandidates.map((c) => (
+                      <button
+                        key={c.id}
+                        onClick={() => onAddCandidate(c)}
+                        className="w-full text-left px-3 py-2.5 border-b last:border-0 border-gray-200 hover:bg-indigo-50 transition-colors flex items-center gap-2.5"
+                      >
+                        <div className="w-8 h-8 rounded-full bg-white flex-shrink-0 flex items-center justify-center text-xs font-bold text-slate-600 border border-gray-200">
+                          {c.candidateName.charAt(0)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium text-slate-900 truncate">
+                            {c.candidateName}
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            {c.matchScore}% Match
+                          </p>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -435,10 +532,11 @@ export default function JobDetailPage() {
     requirements: "",
   });
 
-  // Comparison State
+  // Comparison State - Support up to 3 candidates
   const [showComparisonModal, setShowComparisonModal] = useState(false);
-  const [comparisonCandidate, setComparisonCandidate] =
-    useState<Application | null>(null);
+  const [comparisonCandidates, setComparisonCandidates] = useState<
+    Application[]
+  >([]);
   const [isComparing, setIsComparing] = useState(false);
 
   // Toast and Confirm Dialog States
@@ -452,6 +550,18 @@ export default function JobDetailPage() {
     onConfirm: () => void;
     type: "danger" | "warning" | "info";
   } | null>(null);
+
+  // Bulk Selection States
+  const [selectedCandidates, setSelectedCandidates] = useState<Set<string>>(
+    new Set(),
+  );
+  const [showBulkActions, setShowBulkActions] = useState(false);
+
+  // Filter and Sort States
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+  const [showSortDropdown, setShowSortDropdown] = useState(false);
+  const [filterByScore, setFilterByScore] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<string>("newest");
 
   const handleEditClick = () => {
     if (job) {
@@ -577,14 +687,54 @@ export default function JobDetailPage() {
   const candidates = job.applications || [];
 
   // Filter candidates
-  const filteredCandidates = candidates.filter((c) => {
-    const matchesTab =
-      activeTab === "All" || c.status.toLowerCase() === activeTab.toLowerCase();
-    const matchesSearch =
-      c.candidateName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.email.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesTab && matchesSearch;
-  });
+  const filteredCandidates = candidates
+    .filter((c) => {
+      const matchesTab =
+        activeTab === "All" ||
+        c.status.toLowerCase() === activeTab.toLowerCase();
+      const matchesSearch =
+        c.candidateName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        c.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        c.skillsExtracted.some((skill) =>
+          skill.toLowerCase().includes(searchQuery.toLowerCase()),
+        );
+
+      // Match score filter
+      let matchesScore = true;
+      if (filterByScore !== "all" && c.matchScore !== undefined) {
+        if (filterByScore === "high" && c.matchScore < 80) matchesScore = false;
+        if (
+          filterByScore === "medium" &&
+          (c.matchScore < 50 || c.matchScore >= 80)
+        )
+          matchesScore = false;
+        if (filterByScore === "low" && c.matchScore >= 50) matchesScore = false;
+      }
+
+      return matchesTab && matchesSearch && matchesScore;
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case "newest":
+          return (
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+        case "oldest":
+          return (
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+          );
+        case "match-high":
+          return (b.matchScore || 0) - (a.matchScore || 0);
+        case "match-low":
+          return (a.matchScore || 0) - (b.matchScore || 0);
+        case "name-asc":
+          return a.candidateName.localeCompare(b.candidateName);
+        case "name-desc":
+          return b.candidateName.localeCompare(a.candidateName);
+        default:
+          return 0;
+      }
+    });
 
   // Stats
   const stats = {
@@ -703,6 +853,118 @@ export default function JobDetailPage() {
     }
   };
 
+  // Bulk Selection Handlers
+  const toggleCandidateSelection = (candidateId: string) => {
+    setSelectedCandidates((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(candidateId)) {
+        newSet.delete(candidateId);
+      } else {
+        newSet.add(candidateId);
+      }
+      setShowBulkActions(newSet.size > 0);
+      return newSet;
+    });
+  };
+
+  const selectAllCandidates = () => {
+    const allIds = new Set(filteredCandidates.map((c) => c.id));
+    setSelectedCandidates(allIds);
+    setShowBulkActions(allIds.size > 0);
+  };
+
+  const clearSelection = () => {
+    setSelectedCandidates(new Set());
+    setShowBulkActions(false);
+  };
+
+  const handleBulkAction = async (action: "shortlist" | "reject") => {
+    const candidateIds = Array.from(selectedCandidates);
+    if (candidateIds.length === 0) return;
+
+    const newStatus = action === "shortlist" ? "shortlisted" : "rejected";
+
+    try {
+      const promises = candidateIds.map((id) => {
+        const candidate = candidates.find((c) => c.id === id);
+        if (!candidate) return Promise.resolve();
+
+        return fetch("http://localhost:3000/applications/send-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            appId: id,
+            to: candidate.email,
+            subject: `Application Update - ${job?.title}`,
+            message:
+              action === "shortlist"
+                ? `Dear ${candidate.candidateName},\n\nThank you for applying for the ${job?.title} position.\n\nWe have reviewed your application and are pleased to inform you that you have been shortlisted for further consideration.\n\nBest regards,\nRecruitment Team`
+                : `Dear ${candidate.candidateName},\n\nThank you for your interest in the ${job?.title} position.\n\nAfter careful consideration, we have decided to proceed with other candidates.\n\nBest regards,\nRecruitment Team`,
+            status: newStatus,
+          }),
+        });
+      });
+
+      await Promise.all(promises);
+
+      setJob((prevJob) => {
+        if (!prevJob) return null;
+        return {
+          ...prevJob,
+          applications: prevJob.applications.map((app) =>
+            candidateIds.includes(app.id) ? { ...app, status: newStatus } : app,
+          ),
+        };
+      });
+
+      setToast({
+        message: `${candidateIds.length} candidate(s) ${action === "shortlist" ? "shortlisted" : "rejected"} successfully!`,
+        type: "success",
+      });
+
+      clearSelection();
+    } catch (error) {
+      console.error("Bulk action error:", error);
+      setToast({
+        message: "Failed to update candidates",
+        type: "error",
+      });
+    }
+  };
+
+  const handleBulkEmail = () => {
+    if (selectedCandidates.size === 0) return;
+
+    const firstCandidate = candidates.find((c) => selectedCandidates.has(c.id));
+    if (firstCandidate) {
+      setEmailModal({
+        isOpen: true,
+        type: "bulk",
+        candidate: firstCandidate,
+      });
+    }
+  };
+
+  // Comparison Handlers
+  const handleStartComparison = (candidate: Application) => {
+    setComparisonCandidates([candidate]);
+    setShowComparisonModal(true);
+  };
+
+  const handleAddComparisonCandidate = (candidate: Application) => {
+    if (comparisonCandidates.length < 3) {
+      setComparisonCandidates([...comparisonCandidates, candidate]);
+    }
+  };
+
+  const handleRemoveComparisonCandidate = (candidateId: string) => {
+    const updated = comparisonCandidates.filter((c) => c.id !== candidateId);
+    setComparisonCandidates(updated);
+    if (updated.length === 0) {
+      setShowComparisonModal(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-slate-900 flex flex-col">
       {showSuccessModal && <SuccessModal />}
@@ -741,14 +1003,18 @@ export default function JobDetailPage() {
       )}
 
       {/* Sticky Job Header */}
-      {selectedCandidate && job?.applications && (
+      {/* Comparison Modal */}
+      {job?.applications && (
         <ComparisonModal
           isOpen={showComparisonModal}
-          onClose={() => setShowComparisonModal(false)}
-          candidate1={selectedCandidate}
-          candidate2={comparisonCandidate}
+          onClose={() => {
+            setShowComparisonModal(false);
+            setComparisonCandidates([]);
+          }}
+          comparedCandidates={comparisonCandidates}
           candidates={job.applications}
-          onSelectCandidate2={setComparisonCandidate}
+          onAddCandidate={handleAddComparisonCandidate}
+          onRemoveCandidate={handleRemoveComparisonCandidate}
         />
       )}
 
@@ -816,23 +1082,45 @@ export default function JobDetailPage() {
         >
           {/* Job Summary Section */}
           <section className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8">
-            <p className="text-xs sm:text-sm text-slate-600 mb-4 leading-relaxed whitespace-pre-wrap">
-              {job.description}
-            </p>
+            <div className="mb-4">
+              <h3 className="text-sm font-semibold text-slate-900 mb-2">
+                Job Description
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">
+                {job.description}
+              </p>
+            </div>
+
+            {/* Tech Stack / Requirements */}
+            <div className="border-t border-gray-100 pt-4 mb-4">
+              <h3 className="text-sm font-semibold text-slate-900 mb-3">
+                Requirements & Tech Stack
+              </h3>
+              <div className="flex gap-1.5 sm:gap-2 flex-wrap">
+                {skills.map((skill, idx) => (
+                  <span
+                    key={idx}
+                    className="px-2.5 sm:px-3 py-1 sm:py-1.5 bg-gray-100 text-gray-700 text-xs sm:text-sm font-medium rounded-full border border-gray-200 hover:bg-gray-200 transition-colors"
+                  >
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            </div>
 
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-t border-gray-100 pt-4">
               <div className="flex gap-1.5 sm:gap-2 flex-wrap">
-                {skills.slice(0, 4).map((skill, idx) => (
+                {getPreviewSkills(job.requirements).map((skill, idx) => (
                   <span
                     key={idx}
-                    className="px-2 sm:px-2.5 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-md border border-gray-200"
+                    className="px-2 sm:px-2.5 py-0.5 bg-blue-50 text-blue-700 text-xs font-medium rounded-md border border-blue-200"
                   >
                     {skill}
                   </span>
                 ))}
                 {skills.length > 4 && (
                   <span className="text-xs text-gray-400">
-                    +{skills.length - 4}
+                    +{skills.length - 4} more
                   </span>
                 )}
               </div>
@@ -867,22 +1155,32 @@ export default function JobDetailPage() {
 
           {/* Tabs & Filters */}
           <div className="flex flex-col gap-3 mb-4 sm:mb-6">
-            <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
-              <div className="flex bg-gray-100/50 p-1 rounded-lg border border-gray-200 w-fit min-w-full sm:min-w-0">
-                {["All", "Shortlisted", "Accepted", "Rejected"].map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={`px-3 sm:px-4 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-all whitespace-nowrap ${
-                      activeTab === tab
-                        ? "bg-white text-slate-900 shadow-sm"
-                        : "text-slate-500 hover:text-slate-700"
-                    }`}
-                  >
-                    {tab}
-                  </button>
-                ))}
+            <div className="flex items-center justify-between gap-3">
+              <div className="overflow-x-auto flex-1">
+                <div className="flex bg-gray-100/50 p-1 rounded-lg border border-gray-200 w-fit">
+                  {["All", "Shortlisted", "Accepted", "Rejected"].map((tab) => (
+                    <button
+                      key={tab}
+                      onClick={() => setActiveTab(tab)}
+                      className={`px-3 sm:px-4 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-all whitespace-nowrap ${
+                        activeTab === tab
+                          ? "bg-white text-slate-900 shadow-sm"
+                          : "text-slate-500 hover:text-slate-700"
+                      }`}
+                    >
+                      {tab}
+                    </button>
+                  ))}
+                </div>
               </div>
+              {filteredCandidates.length > 0 && (
+                <button
+                  onClick={selectAllCandidates}
+                  className="px-3 py-1.5 text-xs sm:text-sm font-medium bg-white border border-gray-200 text-slate-700 rounded-lg hover:bg-gray-50 whitespace-nowrap"
+                >
+                  Select All
+                </button>
+              )}
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3">
@@ -896,15 +1194,166 @@ export default function JobDetailPage() {
                   className="pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg w-full sm:w-48 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
                 />
               </div>
-              <button className="p-2 border border-gray-200 rounded-lg bg-white text-slate-600 hover:bg-gray-50 shrink-0">
-                <Filter className="w-4 h-4" />
-              </button>
-              <button className="hidden sm:flex items-center gap-2 px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white text-slate-600 hover:bg-gray-50">
-                <ArrowUpDown className="w-4 h-4" />
-                Sort
-              </button>
+
+              {/* Filter Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => {
+                    setShowFilterDropdown(!showFilterDropdown);
+                    setShowSortDropdown(false);
+                  }}
+                  className={`p-2 border rounded-lg bg-white text-slate-600 hover:bg-gray-50 shrink-0 ${
+                    filterByScore !== "all"
+                      ? "border-blue-500 bg-blue-50"
+                      : "border-gray-200"
+                  }`}
+                >
+                  <Filter className="w-4 h-4" />
+                </button>
+                {showFilterDropdown && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="p-2">
+                      <p className="text-xs font-semibold text-gray-500 px-3 py-2">
+                        Filter by Match Score
+                      </p>
+                      {[
+                        { value: "all", label: "All Candidates" },
+                        { value: "high", label: "High Match (≥80%)" },
+                        { value: "medium", label: "Medium Match (50-79%)" },
+                        { value: "low", label: "Low Match (<50%)" },
+                      ].map((option) => (
+                        <button
+                          key={option.value}
+                          onClick={() => {
+                            setFilterByScore(option.value);
+                            setShowFilterDropdown(false);
+                          }}
+                          className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors ${
+                            filterByScore === option.value
+                              ? "bg-blue-50 text-blue-700 font-medium"
+                              : "text-gray-700 hover:bg-gray-50"
+                          }`}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Sort Dropdown */}
+              <div className="relative hidden sm:block">
+                <button
+                  onClick={() => {
+                    setShowSortDropdown(!showSortDropdown);
+                    setShowFilterDropdown(false);
+                  }}
+                  className="flex items-center gap-2 px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white text-slate-600 hover:bg-gray-50"
+                >
+                  <ArrowUpDown className="w-4 h-4" />
+                  Sort
+                </button>
+                {showSortDropdown && (
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="p-2">
+                      {[
+                        {
+                          value: "newest",
+                          label: "Newest First",
+                          Icon: FileText,
+                        },
+                        {
+                          value: "oldest",
+                          label: "Oldest First",
+                          Icon: FileText,
+                        },
+                        {
+                          value: "match-high",
+                          label: "Highest Match Score",
+                          Icon: FileText,
+                        },
+                        {
+                          value: "match-low",
+                          label: "Lowest Match Score",
+                          Icon: FileText,
+                        },
+                        {
+                          value: "name-asc",
+                          label: "Name (A-Z)",
+                          Icon: FileText,
+                        },
+                        {
+                          value: "name-desc",
+                          label: "Name (Z-A)",
+                          Icon: FileText,
+                        },
+                      ].map((option) => (
+                        <button
+                          key={option.value}
+                          onClick={() => {
+                            setSortBy(option.value);
+                            setShowSortDropdown(false);
+                          }}
+                          className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors flex items-center gap-2 ${
+                            sortBy === option.value
+                              ? "bg-blue-50 text-blue-700 font-medium"
+                              : "text-gray-700 hover:bg-gray-50"
+                          }`}
+                        >
+                          <span>{option.icon}</span>
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
+
+          {/* Bulk Actions Toolbar */}
+          {showBulkActions && (
+            <div className="mb-4 bg-blue-50 border border-blue-200 rounded-xl p-3 sm:p-4 flex items-center justify-between animate-in slide-in-from-top-2 duration-200">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-bold">
+                  {selectedCandidates.size}
+                </div>
+                <span className="text-sm font-medium text-blue-900">
+                  {selectedCandidates.size} candidate(s) selected
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleBulkAction("shortlist")}
+                  className="px-3 py-1.5 text-xs sm:text-sm font-medium bg-white text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-50 transition-all flex items-center gap-1.5"
+                >
+                  <Star className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Shortlist All</span>
+                </button>
+                <button
+                  onClick={() => handleBulkAction("reject")}
+                  className="px-3 py-1.5 text-xs sm:text-sm font-medium bg-white text-red-700 border border-red-200 rounded-lg hover:bg-red-50 transition-all flex items-center gap-1.5"
+                >
+                  <XCircle className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Reject All</span>
+                </button>
+                <button
+                  onClick={handleBulkEmail}
+                  className="px-3 py-1.5 text-xs sm:text-sm font-medium bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-all flex items-center gap-1.5"
+                >
+                  <Mail className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Email All</span>
+                </button>
+                <button
+                  onClick={clearSelection}
+                  className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-white rounded-lg transition-all"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Candidate List */}
           <div className="space-y-2 sm:space-y-3">
@@ -922,37 +1371,63 @@ export default function JobDetailPage() {
               filteredCandidates.map((candidate) => (
                 <div
                   key={candidate.id}
-                  onClick={() => setSelectedCandidate(candidate)}
-                  className={`group relative bg-white rounded-xl border p-3 sm:p-4 transition-all cursor-pointer hover:shadow-md ${
+                  className={`group relative bg-white rounded-xl border p-3 sm:p-4 transition-all ${
                     selectedCandidate?.id === candidate.id
                       ? "border-indigo-500 ring-1 ring-indigo-500 shadow-md"
-                      : "border-gray-200 hover:border-indigo-200"
+                      : "border-gray-200 hover:border-indigo-200 hover:shadow-md"
                   }`}
                 >
                   <div className="flex items-start sm:items-center justify-between gap-2 sm:gap-4">
-                    {/* Left: Info */}
+                    {/* Left: Checkbox + Info */}
                     <div className="flex items-start sm:items-center gap-3 sm:gap-4 flex-1 min-w-0">
-                      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-xs sm:text-sm shrink-0">
-                        {candidate.candidateName.charAt(0)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition-colors truncate">
-                          {candidate.candidateName}
-                        </h3>
-                        <div className="flex flex-wrap items-center gap-1 sm:gap-2 text-[10px] sm:text-xs text-slate-500 mt-0.5">
-                          <span className="hidden sm:inline truncate max-w-[150px]">
-                            {candidate.email}
-                          </span>
-                          <span className="hidden sm:inline">•</span>
-                          <span>{getPostedAgo(candidate.createdAt)}</span>
-                          {candidate.matchScore && (
-                            <>
-                              <span className="sm:hidden">•</span>
-                              <span className="sm:hidden text-indigo-600 font-semibold">
-                                {candidate.matchScore}% match
-                              </span>
-                            </>
+                      {/* Checkbox */}
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleCandidateSelection(candidate.id);
+                        }}
+                        className="shrink-0 cursor-pointer"
+                      >
+                        <div
+                          className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                            selectedCandidates.has(candidate.id)
+                              ? "bg-blue-600 border-blue-600"
+                              : "border-gray-300 hover:border-blue-400"
+                          }`}
+                        >
+                          {selectedCandidates.has(candidate.id) && (
+                            <CheckCircle2 className="w-3.5 h-3.5 text-white" />
                           )}
+                        </div>
+                      </div>
+
+                      {/* Avatar + Name */}
+                      <div
+                        onClick={() => setSelectedCandidate(candidate)}
+                        className="flex items-start sm:items-center gap-3 sm:gap-4 flex-1 min-w-0 cursor-pointer"
+                      >
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-xs sm:text-sm shrink-0">
+                          {candidate.candidateName.charAt(0)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition-colors truncate">
+                            {candidate.candidateName}
+                          </h3>
+                          <div className="flex flex-wrap items-center gap-1 sm:gap-2 text-[10px] sm:text-xs text-slate-500 mt-0.5">
+                            <span className="hidden sm:inline truncate max-w-[150px]">
+                              {candidate.email}
+                            </span>
+                            <span className="hidden sm:inline">•</span>
+                            <span>{getPostedAgo(candidate.createdAt)}</span>
+                            {candidate.matchScore && (
+                              <>
+                                <span className="sm:hidden">•</span>
+                                <span className="sm:hidden text-indigo-600 font-semibold">
+                                  {candidate.matchScore}% match
+                                </span>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1042,15 +1517,20 @@ export default function JobDetailPage() {
                   Interview
                 </button>
                 <button
-                  onClick={() => {
-                    setComparisonCandidate(null); // Reset selection
-                    setShowComparisonModal(true);
-                  }}
+                  onClick={() => handleStartComparison(selectedCandidate)}
                   className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 border border-gray-200 rounded-lg text-xs sm:text-sm font-medium text-slate-700 hover:bg-gray-50 col-span-2 sm:col-span-1"
                 >
                   <ArrowRightLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   Compare
                 </button>
+              </div>
+
+              {/* Progress Tracker */}
+              <div className="bg-white rounded-xl p-4 sm:p-5 border border-gray-200">
+                <h3 className="text-sm sm:text-base font-bold text-slate-900 mb-4">
+                  Application Progress
+                </h3>
+                <ProgressTracker status={selectedCandidate.status} />
               </div>
 
               {/* AI Insight Section */}

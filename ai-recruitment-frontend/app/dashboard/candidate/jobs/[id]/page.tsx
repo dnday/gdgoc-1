@@ -42,11 +42,56 @@ function getPostedAgo(dateString: string): string {
 }
 
 function parseSkills(requirements: string): string[] {
-  return requirements
-    .split(/[,\n•\-]+/)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0 && s.length < 30)
-    .slice(0, 10);
+  // Extract tech keywords and tools using regex patterns
+  const techPatterns = [
+    // Programming languages
+    /\b(JavaScript|TypeScript|Python|Java|Go|Rust|C\+\+|C#|PHP|Ruby|Swift|Kotlin|Scala)\b/gi,
+    // Frameworks & Libraries
+    /\b(React|Vue|Angular|Next\.js|Node\.js|Express|NestJS|Django|FastAPI|Flask|Spring|Laravel)\b/gi,
+    // Databases
+    /\b(PostgreSQL|MySQL|MongoDB|Redis|Cassandra|DynamoDB|Elasticsearch)\b/gi,
+    // Cloud & DevOps
+    /\b(AWS|Azure|GCP|Docker|Kubernetes|Terraform|Jenkins|GitLab|CircleCI)\b/gi,
+    // Tools & Technologies
+    /\b(Git|GraphQL|REST API|gRPC|Kafka|RabbitMQ|Nginx|Apache)\b/gi,
+  ];
+
+  const skills = new Set<string>();
+  const skillMap = new Map<string, string>(); // lowercase -> original case
+
+  techPatterns.forEach((pattern) => {
+    const matches = requirements.match(pattern);
+    if (matches) {
+      matches.forEach((match) => {
+        const lower = match.toLowerCase();
+        // Keep the first occurrence's casing
+        if (!skillMap.has(lower)) {
+          skillMap.set(lower, match);
+        }
+      });
+    }
+  });
+
+  // Add deduplicated skills with proper casing
+  skillMap.forEach((value) => skills.add(value));
+
+  // If no tech keywords found, fall back to simple parsing
+  if (skills.size === 0) {
+    return requirements
+      .split(/[,\n•\-]+/)
+      .map((s) => s.trim())
+      .filter(
+        (s) =>
+          s.length > 2 &&
+          s.length < 25 &&
+          !s.match(
+            /^(years?|experience|strong|knowledge|proficiency|understanding|familiarity|ability|skills?|with)$/i,
+          ),
+      )
+      .slice(0, 6);
+  }
+
+  return Array.from(skills);
 }
 
 export default function CandidateJobDetailPage() {
@@ -130,7 +175,8 @@ export default function CandidateJobDetailPage() {
         </p>
         <button
           onClick={() => router.back()}
-          className="px-4 py-2 bg-gray-900 text-white rounded-lg font-medium">
+          className="px-4 py-2 bg-gray-900 text-white rounded-lg font-medium"
+        >
           Go Back
         </button>
       </div>
@@ -148,7 +194,8 @@ export default function CandidateJobDetailPage() {
             <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
               <button
                 onClick={() => router.back()}
-                className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg text-slate-500 transition-colors shrink-0">
+                className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg text-slate-500 transition-colors shrink-0"
+              >
                 <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
               <div className="min-w-0 flex-1">
@@ -212,19 +259,34 @@ export default function CandidateJobDetailPage() {
             </p>
           </div>
 
-          {/* Requirements */}
+          {/* Requirements & Tech Stack */}
           <div className="p-4 sm:p-6 border-b border-gray-100">
-            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2 sm:mb-3">
-              Requirements & Skills
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">
+              Requirements & Tech Stack
             </h3>
-            <div className="flex flex-wrap gap-1.5 sm:gap-2">
-              {skills.map((skill, idx) => (
-                <span
-                  key={idx}
-                  className="px-2 sm:px-3 py-1 sm:py-1.5 bg-gray-100 text-gray-700 text-xs sm:text-sm font-medium rounded-full">
-                  {skill}
-                </span>
-              ))}
+
+            {/* Full Requirements Text */}
+            <div className="mb-4 p-3 sm:p-4 bg-gray-50 rounded-xl border border-gray-200">
+              <p className="text-xs sm:text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                {job.requirements}
+              </p>
+            </div>
+
+            {/* Skills Keywords */}
+            <div>
+              <h4 className="text-xs sm:text-sm font-semibold text-gray-700 mb-2">
+                Key Skills & Technologies:
+              </h4>
+              <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                {skills.map((skill, idx) => (
+                  <span
+                    key={idx}
+                    className="px-2.5 sm:px-3 py-1 sm:py-1.5 bg-blue-50 text-blue-700 text-xs sm:text-sm font-medium rounded-full border border-blue-200 hover:bg-blue-100 transition-colors"
+                  >
+                    {skill}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -248,7 +310,8 @@ export default function CandidateJobDetailPage() {
                           : applicationStatus === "rejected"
                             ? "bg-red-50 border border-red-200"
                             : "bg-purple-50 border border-purple-200"
-                    }`}>
+                    }`}
+                  >
                     <p
                       className={`text-sm font-semibold ${
                         applicationStatus === "accepted"
@@ -258,7 +321,8 @@ export default function CandidateJobDetailPage() {
                             : applicationStatus === "rejected"
                               ? "text-red-700"
                               : "text-purple-700"
-                      }`}>
+                      }`}
+                    >
                       {applicationStatus === "accepted"
                         ? "🎉 Congratulations! Your application has been accepted!"
                         : applicationStatus === "interview_scheduled"
@@ -275,7 +339,8 @@ export default function CandidateJobDetailPage() {
             ) : job.isActive ? (
               <button
                 onClick={() => setShowApplyModal(true)}
-                className="w-full py-3 sm:py-3.5 bg-gray-900 hover:bg-gray-800 text-white text-sm sm:text-base font-medium rounded-xl transition-all flex items-center justify-center gap-2">
+                className="w-full py-3 sm:py-3.5 bg-gray-900 hover:bg-gray-800 text-white text-sm sm:text-base font-medium rounded-xl transition-all flex items-center justify-center gap-2"
+              >
                 <Send className="w-4 h-4 sm:w-5 sm:h-5" />
                 Apply for this Job
               </button>
@@ -441,7 +506,8 @@ function ApplyModal({
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 sm:p-2 hover:bg-gray-200 rounded-lg transition-colors shrink-0">
+              className="p-1.5 sm:p-2 hover:bg-gray-200 rounded-lg transition-colors shrink-0"
+            >
               <X className="w-5 h-5 text-gray-500" />
             </button>
           </div>
@@ -450,7 +516,8 @@ function ApplyModal({
         {/* Form */}
         <form
           onSubmit={handleSubmit}
-          className="p-4 sm:p-6 space-y-3 sm:space-y-4 overflow-y-auto max-h-[calc(90vh-120px)]">
+          className="p-4 sm:p-6 space-y-3 sm:space-y-4 overflow-y-auto max-h-[calc(90vh-120px)]"
+        >
           {error && (
             <div className="p-3 bg-red-50 text-red-600 text-sm rounded-xl border border-red-100">
               {error}
@@ -496,7 +563,8 @@ function ApplyModal({
                 file
                   ? "border-emerald-300 bg-emerald-50"
                   : "border-gray-200 hover:border-gray-300"
-              }`}>
+              }`}
+            >
               <input
                 type="file"
                 accept=".pdf,.doc,.docx"
@@ -521,7 +589,8 @@ function ApplyModal({
                         e.stopPropagation();
                         setFile(null);
                       }}
-                      className="p-1 hover:bg-emerald-100 rounded">
+                      className="p-1 hover:bg-emerald-100 rounded"
+                    >
                       <X className="w-4 h-4 text-gray-500" />
                     </button>
                   </div>
@@ -545,13 +614,15 @@ function ApplyModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2.5 sm:py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm sm:text-base font-medium rounded-xl transition-all">
+              className="flex-1 py-2.5 sm:py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm sm:text-base font-medium rounded-xl transition-all"
+            >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading || !file}
-              className="flex-1 py-2.5 sm:py-3 bg-gray-900 hover:bg-gray-800 text-white text-sm sm:text-base font-medium rounded-xl transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+              className="flex-1 py-2.5 sm:py-3 bg-gray-900 hover:bg-gray-800 text-white text-sm sm:text-base font-medium rounded-xl transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
               {loading ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />

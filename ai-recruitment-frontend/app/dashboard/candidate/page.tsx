@@ -64,13 +64,58 @@ function getPostedAgo(dateString: string): string {
   return `${diffWeeks}w ago`;
 }
 
-// Parse requirements string to skills array
+// Parse requirements string to extract clean tech keywords
 function parseSkills(requirements: string): string[] {
-  return requirements
-    .split(/[,\n•\-]+/)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0 && s.length < 30)
-    .slice(0, 5);
+  // Extract tech keywords and tools, avoiding long descriptions
+  const techPatterns = [
+    // Programming languages
+    /\b(JavaScript|TypeScript|Python|Java|Go|Rust|C\+\+|C#|PHP|Ruby|Swift|Kotlin|Scala)\b/gi,
+    // Frameworks & Libraries
+    /\b(React|Vue|Angular|Next\.js|Node\.js|Express|NestJS|Django|FastAPI|Flask|Spring|Laravel)\b/gi,
+    // Databases
+    /\b(PostgreSQL|MySQL|MongoDB|Redis|Cassandra|DynamoDB|Elasticsearch)\b/gi,
+    // Cloud & DevOps
+    /\b(AWS|Azure|GCP|Docker|Kubernetes|Terraform|Jenkins|GitLab|CircleCI)\b/gi,
+    // Tools & Technologies
+    /\b(Git|GraphQL|REST API|gRPC|Kafka|RabbitMQ|Nginx|Apache)\b/gi,
+  ];
+
+  const skills = new Set<string>();
+  const skillMap = new Map<string, string>(); // lowercase -> original case
+
+  techPatterns.forEach((pattern) => {
+    const matches = requirements.match(pattern);
+    if (matches) {
+      matches.forEach((match) => {
+        const lower = match.toLowerCase();
+        // Keep the first occurrence's casing
+        if (!skillMap.has(lower)) {
+          skillMap.set(lower, match);
+        }
+      });
+    }
+  });
+
+  // Add deduplicated skills with proper casing
+  skillMap.forEach((value) => skills.add(value));
+
+  // If no tech keywords found, fall back to simple parsing of short terms
+  if (skills.size === 0) {
+    return requirements
+      .split(/[,\n•\-]+/)
+      .map((s) => s.trim())
+      .filter(
+        (s) =>
+          s.length > 2 &&
+          s.length < 25 &&
+          !s.match(
+            /^(years?|experience|strong|knowledge|proficiency|understanding|familiarity|ability|skills?|with)$/i,
+          ),
+      )
+      .slice(0, 5);
+  }
+
+  return Array.from(skills).slice(0, 6);
 }
 
 export default function CandidateDashboard() {
