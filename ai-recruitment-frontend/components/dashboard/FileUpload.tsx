@@ -7,12 +7,14 @@ interface FileUploadProps {
   onFileSelect: (file: File) => void;
   selectedFile: File | null;
   onRemoveFile: () => void;
+  onError?: (message: string) => void;
 }
 
 export default function FileUpload({
   onFileSelect,
   selectedFile,
   onRemoveFile,
+  onError,
 }: FileUploadProps) {
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);

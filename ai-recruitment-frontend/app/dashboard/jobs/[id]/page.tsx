@@ -1301,7 +1301,7 @@ export default function JobDetailPage() {
                               : "text-gray-700 hover:bg-gray-50"
                           }`}
                         >
-                          <span>{option.icon}</span>
+                          <option.Icon className="w-4 h-4" />
                           {option.label}
                         </button>
                       ))}

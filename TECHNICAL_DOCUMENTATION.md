@@ -1,6 +1,7 @@
 # AI Recruitment System - Technical Documentation
 
 ## 📋 Table of Contents
+
 1. [System Overview](#system-overview)
 2. [Backend Architecture](#backend-architecture)
 3. [Supabase Database Schema](#supabase-database-schema)
@@ -34,6 +35,7 @@ Storage: Supabase Storage (for CV files)
 ### Required API Endpoints
 
 #### 1. **Authentication Endpoints**
+
 ```
 POST /api/auth/register
 POST /api/auth/login
@@ -42,6 +44,7 @@ GET  /api/auth/me
 ```
 
 #### 2. **Job Vacancy Endpoints**
+
 ```
 GET    /api/jobs              # List all job openings
 GET    /api/jobs/:id          # Get specific job details
@@ -51,6 +54,7 @@ DELETE /api/jobs/:id          # Delete job opening
 ```
 
 #### 3. **Candidate Endpoints**
+
 ```
 GET    /api/candidates                    # List all candidates
 GET    /api/candidates/:id                # Get candidate details
@@ -61,6 +65,7 @@ POST   /api/candidates/:id/upload-cv      # Upload CV file
 ```
 
 #### 4. **AI Processing Endpoints**
+
 ```
 POST   /api/ai/summarize-cv/:candidateId  # Generate CV summary
 POST   /api/ai/extract-skills/:candidateId # Extract skills from CV
@@ -69,6 +74,7 @@ GET    /api/ai/insights/:candidateId/:jobId # Get AI insights
 ```
 
 #### 5. **Dashboard Endpoints**
+
 ```
 GET    /api/dashboard/stats               # Get recruitment statistics
 GET    /api/dashboard/recent-candidates   # Recent candidates
@@ -84,14 +90,14 @@ graph TB
     B --> D[Job Service]
     B --> E[Candidate Service]
     B --> F[AI Service]
-    
+
     C --> G[Supabase Auth]
     D --> H[Supabase DB]
     E --> H
     E --> I[Supabase Storage]
     F --> J[OpenAI/Gemini API]
     F --> K[CV Parser]
-    
+
     style F fill:#ff9999
     style J fill:#99ccff
 ```
@@ -99,53 +105,55 @@ graph TB
 ### Key Backend Functions
 
 #### CV Processing Pipeline
+
 ```javascript
 // Example: CV Processing Flow
 async function processCandidateCV(candidateId, cvFile) {
   // 1. Upload CV to Supabase Storage
   const cvUrl = await uploadToStorage(cvFile);
-  
+
   // 2. Extract text from PDF
   const cvText = await parsePDF(cvFile);
-  
+
   // 3. AI Summarization
   const summary = await aiSummarize(cvText);
-  
+
   // 4. Skill Extraction
   const skills = await aiExtractSkills(cvText);
-  
+
   // 5. Save to database
   await updateCandidate(candidateId, {
     cv_url: cvUrl,
     cv_text: cvText,
     summary: summary,
-    skills: skills
+    skills: skills,
   });
-  
+
   return { summary, skills };
 }
 ```
 
 #### Job Matching Algorithm
+
 ```javascript
 // Example: Matching Score Calculation
 async function calculateMatchScore(candidateId, jobId) {
   const candidate = await getCandidate(candidateId);
   const job = await getJob(jobId);
-  
+
   // Use AI to analyze match
   const matchAnalysis = await aiAnalyzeMatch({
     candidateSkills: candidate.skills,
     candidateExperience: candidate.summary,
     jobRequirements: job.requirements,
-    jobDescription: job.description
+    jobDescription: job.description,
   });
-  
+
   return {
     score: matchAnalysis.score, // 0-100
     strengths: matchAnalysis.strengths,
     gaps: matchAnalysis.gaps,
-    recommendation: matchAnalysis.recommendation
+    recommendation: matchAnalysis.recommendation,
   };
 }
 ```
@@ -157,12 +165,14 @@ async function calculateMatchScore(candidateId, jobId) {
 ### Database Tables
 
 #### 1. **users** (Supabase Auth handles this)
+
 ```sql
 -- Managed by Supabase Auth
 -- Additional profile data can be stored in a separate table
 ```
 
 #### 2. **user_profiles**
+
 ```sql
 CREATE TABLE user_profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id),
@@ -176,6 +186,7 @@ CREATE TABLE user_profiles (
 ```
 
 #### 3. **jobs**
+
 ```sql
 CREATE TABLE jobs (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -199,6 +210,7 @@ CREATE INDEX idx_jobs_created_by ON jobs(created_by);
 ```
 
 #### 4. **candidates**
+
 ```sql
 CREATE TABLE candidates (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -224,6 +236,7 @@ CREATE INDEX idx_candidates_created_by ON candidates(created_by);
 ```
 
 #### 5. **job_applications**
+
 ```sql
 CREATE TABLE job_applications (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -236,7 +249,7 @@ CREATE TABLE job_applications (
   notes TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  
+
   UNIQUE(job_id, candidate_id)
 );
 
@@ -247,6 +260,7 @@ CREATE INDEX idx_applications_score ON job_applications(match_score DESC);
 ```
 
 #### 6. **ai_processing_logs**
+
 ```sql
 CREATE TABLE ai_processing_logs (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -329,11 +343,11 @@ erDiagram
     users ||--o{ jobs : creates
     users ||--o{ candidates : creates
     users ||--o{ job_applications : creates
-    
+
     jobs ||--o{ job_applications : receives
     candidates ||--o{ job_applications : applies
     candidates ||--o{ ai_processing_logs : generates
-    
+
     jobs {
         uuid id PK
         uuid created_by FK
@@ -342,7 +356,7 @@ erDiagram
         jsonb requirements
         text status
     }
-    
+
     candidates {
         uuid id PK
         uuid created_by FK
@@ -352,7 +366,7 @@ erDiagram
         text summary
         jsonb skills
     }
-    
+
     job_applications {
         uuid id PK
         uuid job_id FK
@@ -382,11 +396,13 @@ Routing: React Router / Next.js routing
 ### Required Pages & Components
 
 #### 1. **Authentication Pages**
+
 - `/login` - Login page
 - `/register` - Registration page
 - `/forgot-password` - Password recovery
 
 #### 2. **Dashboard Page** (`/dashboard`)
+
 ```
 Components needed:
 - StatisticsCards (total jobs, candidates, applications)
@@ -397,6 +413,7 @@ Components needed:
 ```
 
 #### 3. **Jobs Management** (`/jobs`)
+
 ```
 Pages:
 - /jobs - List all job openings
@@ -413,6 +430,7 @@ Components:
 ```
 
 #### 4. **Candidates Management** (`/candidates`)
+
 ```
 Pages:
 - /candidates - List all candidates
@@ -430,6 +448,7 @@ Components:
 ```
 
 #### 5. **Matching & Comparison** (`/matching`)
+
 ```
 Pages:
 - /matching/:jobId - View all candidates for a job with scores
@@ -445,6 +464,7 @@ Components:
 ### Key Frontend Features
 
 #### CV Upload Component
+
 ```typescript
 // Example: CV Upload with AI Processing
 interface CVUploadProps {
@@ -455,28 +475,28 @@ interface CVUploadProps {
 function CVUploadComponent({ candidateId, onUploadComplete }: CVUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [processing, setProcessing] = useState(false);
-  
+
   const handleUpload = async (file: File) => {
     setUploading(true);
-    
+
     // 1. Upload file
     const { data: uploadData } = await supabase.storage
       .from('cvs')
       .upload(`${candidateId}/${file.name}`, file);
-    
+
     setUploading(false);
     setProcessing(true);
-    
+
     // 2. Trigger AI processing
     const response = await fetch(`/api/ai/summarize-cv/${candidateId}`, {
       method: 'POST'
     });
-    
+
     const result = await response.json();
     setProcessing(false);
     onUploadComplete(result);
   };
-  
+
   return (
     <Dropzone onDrop={handleUpload}>
       {uploading && <Spinner />}
@@ -487,6 +507,7 @@ function CVUploadComponent({ candidateId, onUploadComplete }: CVUploadProps) {
 ```
 
 #### Candidate-Job Matching Display
+
 ```typescript
 // Example: Match Score Display
 interface MatchScoreProps {
@@ -502,15 +523,15 @@ function MatchScoreDisplay({ score, insights }: MatchScoreProps) {
   return (
     <Card>
       <CircularProgress value={score} label={`${score}% Match`} />
-      
+
       <Section title="Strengths">
         {insights.strengths.map(s => <Badge>{s}</Badge>)}
       </Section>
-      
+
       <Section title="Skill Gaps">
         {insights.gaps.map(g => <Badge variant="warning">{g}</Badge>)}
       </Section>
-      
+
       <AIRecommendation text={insights.recommendation} />
     </Card>
   );
@@ -536,11 +557,11 @@ const useCandidateStore = create<CandidateStore>((set) => ({
   setFilters: (filters) => set({ filters }),
   fetchCandidates: async () => {
     const { data } = await supabase
-      .from('candidates')
-      .select('*')
-      .order('created_at', { ascending: false });
+      .from("candidates")
+      .select("*")
+      .order("created_at", { ascending: false });
     set({ candidates: data });
-  }
+  },
 }));
 ```
 
@@ -551,10 +572,12 @@ const useCandidateStore = create<CandidateStore>((set) => ({
 ### 🔴 Critical Missing Components
 
 #### 1. **AI Integration Strategy**
+
 > [!CAUTION]
 > **Missing**: No AI service provider specified or API integration plan
 
 **Recommendations**:
+
 - Choose AI provider: OpenAI GPT-4, Google Gemini, or Anthropic Claude
 - Set up API keys and rate limiting
 - Implement token usage tracking
@@ -564,10 +587,12 @@ const useCandidateStore = create<CandidateStore>((set) => ({
 **Implementation Priority**: 🔥 **HIGH**
 
 #### 2. **CV Parsing Library**
+
 > [!WARNING]
 > **Missing**: No PDF/document parsing solution defined
 
 **Recommendations**:
+
 - Backend: `pdf-parse` (Node.js) or `PyPDF2` (Python)
 - Consider OCR for scanned documents: `Tesseract.js`
 - Handle multiple formats: PDF, DOCX, TXT
@@ -576,10 +601,12 @@ const useCandidateStore = create<CandidateStore>((set) => ({
 **Implementation Priority**: 🔥 **HIGH**
 
 #### 3. **Authentication Flow**
+
 > [!IMPORTANT]
 > **Missing**: Detailed authentication implementation
 
 **Recommendations**:
+
 - Use Supabase Auth (already included in stack)
 - Implement email verification
 - Add password reset flow
@@ -589,17 +616,23 @@ const useCandidateStore = create<CandidateStore>((set) => ({
 **Implementation Priority**: 🔥 **HIGH**
 
 #### 4. **File Upload Security**
+
 > [!CAUTION]
 > **Missing**: File validation and security measures
 
 **Recommendations**:
+
 ```javascript
 // File validation rules
 const CV_UPLOAD_RULES = {
   maxSize: 10 * 1024 * 1024, // 10MB
-  allowedTypes: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+  allowedTypes: [
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ],
   virusScan: true, // Use ClamAV or similar
-  sanitizeFilename: true
+  sanitizeFilename: true,
 };
 ```
 
@@ -610,10 +643,12 @@ const CV_UPLOAD_RULES = {
 ### 🟡 Important Missing Features
 
 #### 5. **Error Handling & Logging**
+
 > [!WARNING]
 > **Missing**: Comprehensive error handling strategy
 
 **Recommendations**:
+
 - Frontend: Error boundaries, toast notifications
 - Backend: Centralized error handler, logging service (Winston, Pino)
 - AI failures: Graceful degradation, retry logic
@@ -622,35 +657,40 @@ const CV_UPLOAD_RULES = {
 **Implementation Priority**: 🟠 **MEDIUM**
 
 #### 6. **Data Validation**
+
 > [!IMPORTANT]
 > **Missing**: Input validation schemas
 
 **Recommendations**:
+
 - Use Zod or Yup for schema validation
 - Validate on both frontend and backend
 - Email format, phone number validation
 - Required fields enforcement
 
 **Example**:
+
 ```typescript
-import { z } from 'zod';
+import { z } from "zod";
 
 const JobSchema = z.object({
   title: z.string().min(3).max(100),
   description: z.string().min(50),
   requirements: z.array(z.string()).min(1),
-  employment_type: z.enum(['full-time', 'part-time', 'contract']),
-  salary_range: z.string().optional()
+  employment_type: z.enum(["full-time", "part-time", "contract"]),
+  salary_range: z.string().optional(),
 });
 ```
 
 **Implementation Priority**: 🟠 **MEDIUM**
 
 #### 7. **Search & Filtering**
+
 > [!NOTE]
 > **Missing**: Advanced search capabilities
 
 **Recommendations**:
+
 - Full-text search on candidate names, skills
 - Filter by: skills, experience, education, status
 - Sort by: match score, date added, name
@@ -659,10 +699,12 @@ const JobSchema = z.object({
 **Implementation Priority**: 🟠 **MEDIUM**
 
 #### 8. **Pagination**
+
 > [!NOTE]
 > **Missing**: Data pagination for large datasets
 
 **Recommendations**:
+
 - Implement cursor-based or offset pagination
 - Default page size: 20-50 items
 - Infinite scroll or page numbers
@@ -675,9 +717,11 @@ const JobSchema = z.object({
 ### 🟢 Nice-to-Have Features
 
 #### 9. **Email Notifications**
+
 **Missing**: Communication system
 
 **Recommendations**:
+
 - Email candidates about application status
 - Notify recruiters of new applications
 - Use Supabase Edge Functions + Resend/SendGrid
@@ -686,9 +730,11 @@ const JobSchema = z.object({
 **Implementation Priority**: 🟢 **LOW**
 
 #### 10. **Analytics & Reporting**
+
 **Missing**: Recruitment metrics and insights
 
 **Recommendations**:
+
 - Time-to-hire metrics
 - Source of hire tracking
 - Candidate pipeline visualization
@@ -697,9 +743,11 @@ const JobSchema = z.object({
 **Implementation Priority**: 🟢 **LOW**
 
 #### 11. **Collaborative Features**
+
 **Missing**: Team collaboration tools
 
 **Recommendations**:
+
 - Comments on candidates
 - Share candidate profiles
 - Team member assignments
@@ -708,9 +756,11 @@ const JobSchema = z.object({
 **Implementation Priority**: 🟢 **LOW**
 
 #### 12. **Mobile Responsiveness**
+
 **Missing**: Mobile-first design consideration
 
 **Recommendations**:
+
 - Responsive design for all pages
 - Touch-friendly UI elements
 - Consider Progressive Web App (PWA)
@@ -723,6 +773,7 @@ const JobSchema = z.object({
 ## 📊 Implementation Roadmap
 
 ### Phase 1: MVP (Minimum Viable Product)
+
 **Timeline**: 2-3 weeks
 
 ```
@@ -736,6 +787,7 @@ const JobSchema = z.object({
 ```
 
 ### Phase 2: AI Enhancement
+
 **Timeline**: 1-2 weeks
 
 ```
@@ -747,6 +799,7 @@ const JobSchema = z.object({
 ```
 
 ### Phase 3: UX Improvements
+
 **Timeline**: 1-2 weeks
 
 ```
@@ -759,6 +812,7 @@ const JobSchema = z.object({
 ```
 
 ### Phase 4: Polish & Scale
+
 **Timeline**: 1 week
 
 ```
@@ -791,12 +845,14 @@ const JobSchema = z.object({
 ## 🚀 Getting Started
 
 ### 1. Set Up Supabase Project
+
 ```bash
 # Create new Supabase project at https://supabase.com
 # Copy your project URL and anon key
 ```
 
 ### 2. Initialize Database
+
 ```sql
 -- Run the SQL schema provided above in Supabase SQL Editor
 -- Enable RLS policies
@@ -804,6 +860,7 @@ const JobSchema = z.object({
 ```
 
 ### 3. Backend Setup
+
 ```bash
 # Example: Node.js + Express
 npm init -y
@@ -818,6 +875,7 @@ OPENAI_API_KEY=your_openai_key
 ```
 
 ### 4. Frontend Setup
+
 ```bash
 # Example: React + Vite
 npm create vite@latest frontend -- --template react-ts
@@ -832,15 +890,18 @@ npm install react-dropzone recharts
 ## 📚 Additional Resources
 
 ### Supabase Documentation
+
 - [Supabase Auth Guide](https://supabase.com/docs/guides/auth)
 - [Row Level Security](https://supabase.com/docs/guides/auth/row-level-security)
 - [Storage Guide](https://supabase.com/docs/guides/storage)
 
 ### AI Integration
+
 - [OpenAI API Documentation](https://platform.openai.com/docs)
 - [Google Gemini API](https://ai.google.dev/docs)
 
 ### Frontend Libraries
+
 - [React Query](https://tanstack.com/query/latest)
 - [Zustand](https://github.com/pmndrs/zustand)
 - [shadcn/ui](https://ui.shadcn.com/)

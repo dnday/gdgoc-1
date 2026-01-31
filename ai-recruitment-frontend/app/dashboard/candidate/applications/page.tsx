@@ -74,7 +74,7 @@ export default function MyApplicationsPage() {
   const getStatusConfig = (status: string) => {
     const configs: Record<
       string,
-      { color: string; icon: JSX.Element; label: string; step: number }
+      { color: string; icon: React.ReactElement; label: string; step: number }
     > = {
       applied: {
         color: "blue",
