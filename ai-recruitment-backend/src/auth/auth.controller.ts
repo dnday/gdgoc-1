@@ -57,6 +57,7 @@ export class AuthController {
       params.append('picture', user.picture);
     }
 
-    res.redirect(`http://localhost:3001/login-success?${params.toString()}`);
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+    res.redirect(`${frontendUrl}/login-success?${params.toString()}`);
   }
 }
