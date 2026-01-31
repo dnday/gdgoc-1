@@ -130,7 +130,7 @@ export default function Dashboard() {
   // Fetch jobs from API
   const fetchJobs = useCallback(async () => {
     try {
-      const res = await fetch("http://localhost:3000/jobs");
+      const res = await fetch("${API_URL}/jobs");
       const data: ApiJob[] = await res.json();
 
       // Transform API data to frontend format
@@ -199,7 +199,7 @@ export default function Dashboard() {
 
     try {
       // 3. Call API
-      const res = await fetch(`http://localhost:3000/jobs/${jobId}`, {
+      const res = await fetch(`${API_URL}/jobs/${jobId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isActive }),
@@ -233,7 +233,7 @@ export default function Dashboard() {
 
         try {
           // 2. Call API
-          const res = await fetch(`http://localhost:3000/jobs/${jobId}`, {
+          const res = await fetch(`${API_URL}/jobs/${jobId}`, {
             method: "DELETE",
           });
 

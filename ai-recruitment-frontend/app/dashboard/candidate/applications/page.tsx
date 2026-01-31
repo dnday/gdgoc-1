@@ -56,7 +56,7 @@ export default function MyApplicationsPage() {
     const fetchApplications = async () => {
       try {
         const res = await fetch(
-          `http://localhost:3000/applications/user/${userId}`,
+          `${API_URL}/applications/user/${userId}`,
         );
         if (!res.ok) throw new Error("Failed to fetch applications");
         const data = await res.json();

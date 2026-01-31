@@ -44,7 +44,7 @@ export default function BecomeRecruiter() {
 
     try {
       const res = await fetch(
-        "http://localhost:3000/recruiter-requests/my-request",
+        "${API_URL}/recruiter-requests/my-request",
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -79,7 +79,7 @@ export default function BecomeRecruiter() {
     }
 
     try {
-      const res = await fetch("http://localhost:3000/recruiter-requests", {
+      const res = await fetch("${API_URL}/recruiter-requests", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

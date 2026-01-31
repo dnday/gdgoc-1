@@ -755,7 +755,7 @@ export default function JobDetailPage() {
 
   const handleShortlist = async (candidate: Application) => {
     try {
-      const res = await fetch("http://localhost:3000/applications/send-email", {
+      const res = await fetch(`${API_URL}/applications/send-email`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -889,7 +889,7 @@ export default function JobDetailPage() {
         const candidate = candidates.find((c) => c.id === id);
         if (!candidate) return Promise.resolve();
 
-        return fetch("http://localhost:3000/applications/send-email", {
+        return fetch(`${API_URL}/applications/send-email`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

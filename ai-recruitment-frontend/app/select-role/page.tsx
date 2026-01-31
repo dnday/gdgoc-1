@@ -32,7 +32,7 @@ function SelectRoleContent() {
 
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:3000/auth/google/complete", {
+      const res = await fetch("${API_URL}/auth/google/complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

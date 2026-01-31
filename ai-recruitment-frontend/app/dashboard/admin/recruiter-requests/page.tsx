@@ -72,8 +72,8 @@ export default function AdminRecruiterRequests() {
     try {
       const url =
         filter === "all"
-          ? "http://localhost:3000/recruiter-requests"
-          : `http://localhost:3000/recruiter-requests?status=${filter}`;
+          ? "${API_URL}/recruiter-requests"
+          : `${API_URL}/recruiter-requests?status=${filter}`;
 
       const res = await fetch(url, {
         headers: {
@@ -103,7 +103,7 @@ export default function AdminRecruiterRequests() {
 
     try {
       const res = await fetch(
-        `http://localhost:3000/recruiter-requests/${requestId}/review`,
+        `${API_URL}/recruiter-requests/${requestId}/review`,
         {
           method: "PATCH",
           headers: {

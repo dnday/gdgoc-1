@@ -17,7 +17,7 @@ export default function RegisterForm() {
     setError("");
 
     try {
-      const res = await fetch("http://localhost:3000/auth/register", {
+      const res = await fetch("${API_URL}/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
@@ -158,7 +158,7 @@ export default function RegisterForm() {
         <button
           type="button"
           onClick={() => {
-            window.location.href = `http://localhost:3000/auth/google`;
+            window.location.href = `${API_URL}/auth/google`;
           }}
           className="w-full py-3 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-xl border border-gray-200 transition-all flex items-center justify-center gap-3"
         >

@@ -136,7 +136,7 @@ export default function CandidateDashboard() {
       const userEmail = localStorage.getItem("userEmail");
 
       // 1. Fetch available jobs
-      const res = await fetch("http://localhost:3000/jobs");
+      const res = await fetch("${API_URL}/jobs");
       const data: ApiJob[] = await res.json();
 
       // 2. Fetch user's applied jobs if email exists
@@ -144,7 +144,7 @@ export default function CandidateDashboard() {
       if (userEmail) {
         try {
           const appliedRes = await fetch(
-            `http://localhost:3000/applications/candidate/applied?email=${userEmail}`,
+            `${API_URL}/applications/candidate/applied?email=${userEmail}`,
           );
           if (appliedRes.ok) {
             appliedJobIds = await appliedRes.json();

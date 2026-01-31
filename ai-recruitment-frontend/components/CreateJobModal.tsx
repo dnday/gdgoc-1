@@ -36,7 +36,7 @@ export default function CreateJobModal({
         throw new Error("Anda harus login terlebih dahulu");
       }
 
-      const res = await fetch("http://localhost:3000/jobs", {
+      const res = await fetch("${API_URL}/jobs", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
