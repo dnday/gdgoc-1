@@ -2,6 +2,7 @@
 
 import ConfirmDialog from "@/components/ConfirmDialog";
 import Toast from "@/components/Toast";
+import { API_URL } from "@/lib/config";
 import Cookies from "js-cookie";
 import {
   Briefcase,
@@ -72,7 +73,7 @@ export default function AdminRecruiterRequests() {
     try {
       const url =
         filter === "all"
-          ? "${API_URL}/recruiter-requests"
+          ? `${API_URL}/recruiter-requests`
           : `${API_URL}/recruiter-requests?status=${filter}`;
 
       const res = await fetch(url, {

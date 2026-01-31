@@ -1,5 +1,6 @@
 "use client";
 
+import { API_URL } from "@/lib/config";
 import Cookies from "js-cookie";
 import { Briefcase, User } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -32,7 +33,7 @@ function SelectRoleContent() {
 
     setLoading(true);
     try {
-      const res = await fetch("${API_URL}/auth/google/complete", {
+      const res = await fetch(`${API_URL}/auth/google/complete`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -100,9 +101,11 @@ function SelectRoleContent() {
               role === "candidate"
                 ? "border-blue-600 bg-blue-50/50"
                 : "border-gray-100 hover:border-gray-200"
-            }`}>
+            }`}
+          >
             <div
-              className={`mb-3 ${role === "candidate" ? "text-blue-600" : "text-gray-400"}`}>
+              className={`mb-3 ${role === "candidate" ? "text-blue-600" : "text-gray-400"}`}
+            >
               <User className="w-8 h-8" />
             </div>
             <div className="font-bold text-gray-900">Candidate</div>
@@ -118,9 +121,11 @@ function SelectRoleContent() {
               role === "recruiter"
                 ? "border-blue-600 bg-blue-50/50"
                 : "border-gray-100 hover:border-gray-200"
-            }`}>
+            }`}
+          >
             <div
-              className={`mb-3 ${role === "recruiter" ? "text-blue-600" : "text-gray-400"}`}>
+              className={`mb-3 ${role === "recruiter" ? "text-blue-600" : "text-gray-400"}`}
+            >
               <Briefcase className="w-8 h-8" />
             </div>
             <div className="font-bold text-gray-900">Recruiter</div>
@@ -131,7 +136,8 @@ function SelectRoleContent() {
         <button
           onClick={handleSubmit}
           disabled={loading}
-          className="w-full py-3.5 bg-gray-900 hover:bg-gray-800 text-white font-bold rounded-xl shadow-lg shadow-gray-900/20 transition-all transform hover:-translate-y-0.5 disabled:opacity-70 disabled:cursor-not-allowed">
+          className="w-full py-3.5 bg-gray-900 hover:bg-gray-800 text-white font-bold rounded-xl shadow-lg shadow-gray-900/20 transition-all transform hover:-translate-y-0.5 disabled:opacity-70 disabled:cursor-not-allowed"
+        >
           {loading ? "Processing..." : "Continue"}
         </button>
       </div>
@@ -146,7 +152,8 @@ export default function SelectRole() {
         <div className="flex h-screen items-center justify-center bg-gray-50">
           <div className="w-12 h-12 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin"></div>
         </div>
-      }>
+      }
+    >
       <SelectRoleContent />
     </Suspense>
   );

@@ -1,5 +1,6 @@
 "use client";
 
+import { API_URL } from "@/lib/config";
 import Cookies from "js-cookie";
 import {
   Briefcase,
@@ -41,14 +42,11 @@ export default function RequestRecruiterAccess() {
     }
 
     try {
-      const res = await fetch(
-        "${API_URL}/recruiter-requests/my-request",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+      const res = await fetch(`${API_URL}/recruiter-requests/my-request`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
         },
-      );
+      });
 
       if (res.ok) {
         const data = await res.json();
@@ -73,7 +71,7 @@ export default function RequestRecruiterAccess() {
     }
 
     try {
-      const res = await fetch("${API_URL}/recruiter-requests", {
+      const res = await fetch(`${API_URL}/recruiter-requests`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

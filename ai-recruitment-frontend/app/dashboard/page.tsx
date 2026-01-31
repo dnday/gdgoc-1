@@ -4,6 +4,7 @@ import AccountDropdown from "@/components/AccountDropdown";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import CreateJobModal from "@/components/CreateJobModal";
 import Toast from "@/components/Toast";
+import { API_URL } from "@/lib/config";
 import Cookies from "js-cookie";
 import { Briefcase, Check, Plus, Search, Trash2, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -130,7 +131,7 @@ export default function Dashboard() {
   // Fetch jobs from API
   const fetchJobs = useCallback(async () => {
     try {
-      const res = await fetch("${API_URL}/jobs");
+      const res = await fetch(`${API_URL}/jobs`);
       const data: ApiJob[] = await res.json();
 
       // Transform API data to frontend format

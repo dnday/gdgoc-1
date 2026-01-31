@@ -1,6 +1,7 @@
 "use client";
 
 import AccountDropdown from "@/components/AccountDropdown";
+import { API_URL } from "@/lib/config";
 import Cookies from "js-cookie";
 import {
   Briefcase,
@@ -136,7 +137,7 @@ export default function CandidateDashboard() {
       const userEmail = localStorage.getItem("userEmail");
 
       // 1. Fetch available jobs
-      const res = await fetch("${API_URL}/jobs");
+      const res = await fetch(`${API_URL}/jobs`);
       const data: ApiJob[] = await res.json();
 
       // 2. Fetch user's applied jobs if email exists

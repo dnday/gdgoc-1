@@ -1,5 +1,6 @@
 "use client";
 
+import { API_URL } from "@/lib/config";
 import Cookies from "js-cookie";
 import { ArrowRight, Lock, Mail } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -17,7 +18,7 @@ export default function RegisterForm() {
     setError("");
 
     try {
-      const res = await fetch("${API_URL}/auth/register", {
+      const res = await fetch(`${API_URL}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),

@@ -1,5 +1,6 @@
 "use client";
 
+import { API_URL } from "@/lib/config";
 import Cookies from "js-cookie";
 import {
   Briefcase,
@@ -55,9 +56,7 @@ export default function MyApplicationsPage() {
 
     const fetchApplications = async () => {
       try {
-        const res = await fetch(
-          `${API_URL}/applications/user/${userId}`,
-        );
+        const res = await fetch(`${API_URL}/applications/user/${userId}`);
         if (!res.ok) throw new Error("Failed to fetch applications");
         const data = await res.json();
         setApplications(data);

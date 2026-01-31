@@ -1,5 +1,6 @@
 "use client";
 
+import { API_URL } from "@/lib/config";
 import { X } from "lucide-react";
 import { useState } from "react";
 
@@ -36,7 +37,7 @@ export default function CreateJobModal({
         throw new Error("Anda harus login terlebih dahulu");
       }
 
-      const res = await fetch("${API_URL}/jobs", {
+      const res = await fetch(`${API_URL}/jobs`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -81,7 +82,8 @@ export default function CreateJobModal({
           <h2 className="text-xl font-bold text-gray-900">Create New Job</h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          >
             <X className="w-5 h-5 text-gray-500" />
           </button>
         </div>
@@ -94,9 +96,7 @@ export default function CreateJobModal({
         )}
 
         {/* Form */}
-        <form
-          onSubmit={handleSubmit}
-          className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-gray-700">
               Job Title *
@@ -148,13 +148,15 @@ export default function CreateJobModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-xl transition-all">
+              className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-xl transition-all"
+            >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 py-3 bg-gray-900 hover:bg-gray-800 text-white font-medium rounded-xl transition-all disabled:opacity-70 disabled:cursor-not-allowed">
+              className="flex-1 py-3 bg-gray-900 hover:bg-gray-800 text-white font-medium rounded-xl transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+            >
               {loading ? "Creating..." : "Create Job"}
             </button>
           </div>
