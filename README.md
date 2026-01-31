@@ -469,15 +469,6 @@ SOFTWARE.
 
 ---
 
-## 📞 Contact & Support
-
-For questions or issues:
-
-- **GitHub Repository**: [Your repository URL]
-- **GitHub Issues**: [repository URL]/issues
-
----
-
 ## 🏆 Project Highlights
 
 ✨ **AI-Powered**: Intelligent matching and analysis  
