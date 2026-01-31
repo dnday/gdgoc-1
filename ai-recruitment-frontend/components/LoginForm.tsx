@@ -170,7 +170,8 @@ export default function LoginForm() {
         <button
           type="button"
           onClick={() => {
-            window.location.href = `${API_URL}/auth/google`;
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+            window.location.href = `${apiUrl}/auth/google`;
           }}
           className="w-full py-3 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-xl border border-gray-200 transition-all flex items-center justify-center gap-3"
         >
